@@ -666,6 +666,164 @@ def _check_dgs_leadlag_artifact(factor, target):
     }
 
 
+# ---- Same-index / same-sector lead-lag auto-suppression ----
+# Per leadlag_same_index_or_same_sector_auto_suppress_rule_2026_04_22.
+# Lead-lag scan hits between assets sharing an index or sector-parent
+# relationship are auto-closed as dead ends because Granger "significance"
+# reflects mechanical inclusion / shared-factor exposure, not true lead-lag.
+
+# Broad market indices (a lead asset that is a component of these should be suppressed).
+_BROAD_INDICES = {"SPY", "QQQ", "DIA", "IWM", "VOO", "VTI", "RSP", "MDY"}
+
+# Sector SPDR ETFs (components of SPY; also themselves potential "lag" targets
+# that should not be driven by sub-industry ETFs or individual component stocks).
+_SECTOR_SPDR_ETFS = {"XLF", "XLK", "XLE", "XLU", "XLV", "XLI", "XLP", "XLY",
+                     "XLB", "XLRE", "XLC"}
+
+# Sub-industry ETFs mapped to their parent sector SPDR.
+# Lead-lag from any of these into the parent sector or any broad index is a
+# mechanical-inclusion artifact.
+_SUB_TO_PARENT_SECTOR = {
+    "KRE": "XLF",  "KBE": "XLF",  "IAI": "XLF",  "IAT": "XLF",
+    "SMH": "XLK",  "SOXX": "XLK", "IGV": "XLK",  "HACK": "XLK",
+    "XBI": "XLV",  "IBB": "XLV",  "IHI": "XLV",  "IHF": "XLV",
+    "OIH": "XLE",  "XOP": "XLE",  "FRAK": "XLE", "OILK": "XLE",
+    "XHB": "XLY",  "ITB": "XLY",  "RETL": "XLY", "XRT": "XLY",
+    "XPH": "XLV",
+    "XME": "XLB",  "SLX": "XLB",  "GDX": "XLB",  "GDXJ": "XLB",
+    "IYT": "XLI",  "JETS": "XLI",
+}
+
+# Major single stocks mapped to their sector SPDR (non-exhaustive; covers the
+# documented known-null chains JPM/BAC/GS/WFC -> XLF -> SPY etc.).
+_STOCK_TO_SECTOR_SPDR = {
+    # Financials
+    "JPM": "XLF", "BAC": "XLF", "WFC": "XLF", "C": "XLF", "GS": "XLF",
+    "MS": "XLF", "USB": "XLF", "PNC": "XLF", "TFC": "XLF", "SCHW": "XLF",
+    "BLK": "XLF", "AXP": "XLF", "SPGI": "XLF", "MCO": "XLF", "ICE": "XLF",
+    "CME": "XLF", "CB": "XLF", "V": "XLF", "MA": "XLF",
+    # Technology
+    "AAPL": "XLK", "MSFT": "XLK", "NVDA": "XLK", "AVGO": "XLK", "ORCL": "XLK",
+    "CRM": "XLK", "ADBE": "XLK", "CSCO": "XLK", "ACN": "XLK", "IBM": "XLK",
+    "AMD": "XLK", "QCOM": "XLK", "INTC": "XLK", "TXN": "XLK", "NOW": "XLK",
+    "INTU": "XLK", "TSM": "XLK",
+    # Energy
+    "XOM": "XLE", "CVX": "XLE", "COP": "XLE", "EOG": "XLE", "SLB": "XLE",
+    "MPC": "XLE", "PSX": "XLE", "VLO": "XLE", "OXY": "XLE", "PXD": "XLE",
+    # Healthcare
+    "LLY": "XLV", "UNH": "XLV", "JNJ": "XLV", "MRK": "XLV", "ABBV": "XLV",
+    "PFE": "XLV", "ABT": "XLV", "TMO": "XLV", "DHR": "XLV", "BMY": "XLV",
+    "AMGN": "XLV", "ISRG": "XLV",
+    # Industrials
+    "CAT": "XLI", "BA": "XLI", "HON": "XLI", "UPS": "XLI", "GE": "XLI",
+    "RTX": "XLI", "LMT": "XLI", "DE": "XLI", "UNP": "XLI", "MMM": "XLI",
+    # Consumer Discretionary
+    "AMZN": "XLY", "TSLA": "XLY", "HD": "XLY", "MCD": "XLY", "NKE": "XLY",
+    "LOW": "XLY", "SBUX": "XLY", "TJX": "XLY", "BKNG": "XLY",
+    # Consumer Staples
+    "WMT": "XLP", "PG": "XLP", "KO": "XLP", "PEP": "XLP", "COST": "XLP",
+    "PM": "XLP", "MO": "XLP", "MDLZ": "XLP",
+    # Communication Services
+    "GOOGL": "XLC", "GOOG": "XLC", "META": "XLC", "NFLX": "XLC", "DIS": "XLC",
+    "VZ": "XLC", "T": "XLC", "CMCSA": "XLC",
+    # Utilities
+    "NEE": "XLU", "DUK": "XLU", "SO": "XLU", "AEP": "XLU", "SRE": "XLU",
+    "D": "XLU", "XEL": "XLU", "PCG": "XLU",
+    # Materials
+    "LIN": "XLB", "SHW": "XLB", "APD": "XLB", "FCX": "XLB", "NEM": "XLB",
+    "DOW": "XLB", "DD": "XLB", "NUE": "XLB",
+    # Real Estate
+    "PLD": "XLRE", "AMT": "XLRE", "EQIX": "XLRE", "CCI": "XLRE", "PSA": "XLRE",
+    "O": "XLRE", "SPG": "XLRE", "WELL": "XLRE",
+}
+
+# Stocks whose single-stock -> SPY lead-lag is documented as null via the
+# sector-chain rule (stock in sector, sector->SPY known null).
+_DOCUMENTED_LEADLAG_NULL_SECTORS = {"XLF"}  # bank_stocks_spy_leadlag_dead_end_2026_04_22
+
+
+def _check_same_index_or_sector_leadlag_artifact(factor, target):
+    """Auto-suppress lead-lag tests where the relationship is mechanical-inclusion
+    or shared-factor-exposure per leadlag_same_index_or_same_sector_auto_suppress_rule_2026_04_22.
+
+    Suppression criteria (any one triggers):
+      (1) Sector SPDR ETF -> broad index (e.g., XLF->SPY): mechanical inclusion.
+      (2) Sub-industry ETF -> parent sector SPDR or broad index (e.g., KRE->XLF, KRE->SPY):
+          mechanical inclusion.
+      (3) Single stock -> its sector SPDR (e.g., JPM->XLF): mechanical inclusion.
+      (4) Single stock -> broad index when the stock's sector has documented null
+          sector->SPY lead-lag (e.g., JPM->SPY via XLF->SPY null).
+      (5) Sector SPDR -> another sector SPDR: shared risk-on/risk-off factor.
+
+    Returns a dict describing the suppression, or None if rule doesn't apply.
+    """
+    f = (factor or "").upper()
+    t = (target or "").upper()
+    if not f or not t or f == t:
+        return None
+
+    def _make(reason_detail, criterion):
+        return {
+            "check": "same_index_or_sector_leadlag_artifact",
+            "rule": "leadlag_same_index_or_same_sector_auto_suppress_rule_2026_04_22",
+            "suppressed": True,
+            "criterion": criterion,
+            "reason": (
+                f"{factor} -> {target} lead-lag is auto-suppressed per the "
+                f"2026-04-22 canonical rule. {reason_detail} Granger significance "
+                "on these pairs reflects mechanical inclusion / shared-factor "
+                "exposure rather than true lead-lag. DO NOT queue as scan hit. "
+                "Graduation requires pre-registered regression + threshold with "
+                "AR1 control and beta>=0.05 + P&L>=0.5% in BOTH IS and OOS."
+            ),
+        }
+
+    # (1) Sector SPDR -> broad index
+    if f in _SECTOR_SPDR_ETFS and t in _BROAD_INDICES:
+        return _make(
+            f"{f} is a component sector SPDR of {t} (mechanical inclusion).",
+            "sector_spdr_to_broad_index",
+        )
+
+    # (5) Sector SPDR -> another sector SPDR (shared risk factor)
+    if f in _SECTOR_SPDR_ETFS and t in _SECTOR_SPDR_ETFS:
+        return _make(
+            f"{f} and {t} are both sector SPDRs of SPY and share the risk-on/"
+            "risk-off factor (confirmed by xlf_granger_leadlag_known_null_2026_04_18).",
+            "sector_spdr_to_sector_spdr",
+        )
+
+    # (2) Sub-industry ETF -> parent sector or broad index
+    parent = _SUB_TO_PARENT_SECTOR.get(f)
+    if parent is not None:
+        if t == parent or t in _BROAD_INDICES:
+            return _make(
+                f"{f} is a sub-industry subset of {parent} "
+                f"(mechanical inclusion in {t}).",
+                "sub_industry_etf_to_parent_or_broad",
+            )
+
+    # (3) Single stock -> its sector SPDR
+    stock_sector = _STOCK_TO_SECTOR_SPDR.get(f)
+    if stock_sector is not None and t == stock_sector:
+        return _make(
+            f"{f} is a component stock of {stock_sector} (mechanical inclusion).",
+            "single_stock_to_own_sector_spdr",
+        )
+
+    # (4) Single stock -> broad index via documented-null sector chain
+    if (stock_sector is not None
+            and t in _BROAD_INDICES
+            and stock_sector in _DOCUMENTED_LEADLAG_NULL_SECTORS):
+        return _make(
+            f"{f} is in sector {stock_sector}, and {stock_sector}->{t} is a "
+            "documented null lead-lag (bank_stocks_spy_leadlag_dead_end_2026_04_22).",
+            "single_stock_to_broad_via_null_sector_chain",
+        )
+
+    return None
+
+
 def cmd_regression(args):
     """Run exposure, lead-lag, or structural break regression test."""
     from tools.timeseries import get_returns, get_aligned_returns
@@ -698,12 +856,18 @@ def cmd_regression(args):
         max_lags = args.max_lags or 10
         result = causal_tests.test_lead_lag(factor_rets, target_rets, max_lags=max_lags, oos_start=args.oos_start)
         params["max_lags"] = max_lags
-        # Auto-suppression: DGS10/DGS30 -> rate-sensitive ETF lead-lag is a documented
-        # systematic artifact (secular drift 2020-2024, not true lead-lag).
+        # Auto-suppression cascade (first match wins):
+        #   (a) DGS -> rate-sensitive ETF (documented secular-drift artifact)
+        #   (b) Commodity future -> commodity-sensitive ETF (documented Granger artifact)
+        #   (c) Same-index / same-sector mechanical inclusion
+        #       (XLF->SPY, JPM->XLF, JPM->SPY, KRE->XLF, XLY->XLF, etc.)
         artifact = _check_dgs_leadlag_artifact(args.factor, args.target)
         if artifact is None:
             # Fall through to commodity -> sector check.
             artifact = _check_commodity_sector_leadlag_artifact(args.factor, args.target)
+        if artifact is None:
+            # Fall through to same-index / same-sector mechanical-inclusion check.
+            artifact = _check_same_index_or_sector_leadlag_artifact(args.factor, args.target)
         if artifact is not None:
             result["scan_artifact_check"] = artifact
             result["scan_artifact_suppressed"] = artifact.get("suppressed", False)
