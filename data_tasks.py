@@ -450,6 +450,30 @@ _COMMODITY_FUTURES = {
     "LE=F", "HE=F",           # livestock (cattle, hogs)
 }
 
+# Commodity ETFs whose returns track the same underlying as the futures above.
+# Per gld_xlb_leadlag_scan_hit_autoclosed_2026_04_23: a scan hit of the form
+# GLD -> XLB (gold commodity ETF -> materials sector) is the same artifact as
+# GC=F -> XLB, which is already in the systematic dead-end set. Including
+# commodity ETFs here closes a gap in the auto-suppression rule.
+_COMMODITY_ETFS = {
+    # Gold
+    "GLD", "IAU", "SGOL", "GLDM", "BAR", "AAAU",
+    # Silver
+    "SLV", "SIVR",
+    # Platinum / palladium
+    "PPLT", "PALL",
+    # Crude oil (long and inverse)
+    "USO", "USL", "UCO", "SCO", "BNO", "OIL", "OILK",
+    # Natural gas
+    "UNG", "UNL", "BOIL", "KOLD",
+    # Broad commodities
+    "DBC", "GSG", "PDBC", "FTGC", "COMB",
+    # Agriculture
+    "DBA", "WEAT", "CORN", "SOYB", "CANE",
+    # Copper (commodity ETNs)
+    "CPER", "JJC",
+}
+
 # Sector/industry ETFs where commodity Granger lead-lag has been tested and
 # repeatedly failed canonical threshold backtest.
 _COMMODITY_SENSITIVE_ETFS = {
@@ -468,10 +492,17 @@ def _is_dgs_rate_sensitive_pair(factor, target):
 
 
 def _is_commodity_sector_pair(factor, target):
-    """Return True if factor is a commodity future and target is a
-    commodity-sensitive ETF/stock. Granger lead-lag on these pairs is
-    a documented systematic dead end."""
-    return factor in _COMMODITY_FUTURES and target.upper() in _COMMODITY_SENSITIVE_ETFS
+    """Return True if factor is a commodity future OR commodity ETF and
+    target is a commodity-sensitive ETF/stock. Granger lead-lag on these
+    pairs is a documented systematic dead end.
+    Commodity ETFs added 2026-04-23 per gld_xlb_leadlag_scan_hit_autoclosed_2026_04_23
+    to close the scan-hit gap where e.g. GLD->XLB was queued (GC=F->XLB was
+    already suppressed).
+    """
+    f = (factor or "").upper()
+    t = (target or "").upper()
+    is_commodity_factor = (factor in _COMMODITY_FUTURES) or (f in _COMMODITY_ETFS)
+    return is_commodity_factor and t in _COMMODITY_SENSITIVE_ETFS
 
 
 def _is_commodity_liberation_day_break(factor, break_date):
@@ -499,12 +530,13 @@ def _check_commodity_sector_leadlag_artifact(factor, target):
     """
     if not _is_commodity_sector_pair(factor, target):
         return None
+    factor_kind = "future" if factor in _COMMODITY_FUTURES else "ETF"
     return {
         "check": "commodity_sector_leadlag_systematic_artifact_warning",
         "rule": "commodity_sector_granger_leadlag_systematic_dead_end_2026_04_20",
         "suppressed": True,
         "reason": (
-            f"Commodity future {factor} -> {target.upper()} Granger lead-lag is a "
+            f"Commodity {factor_kind} {factor} -> {target.upper()} Granger lead-lag is a "
             "documented systematic artifact (7+ confirmations). The relationship is "
             "contemporaneous exposure (beta test) with volatility clustering that "
             "produces spurious Granger significance. Threshold backtests of the "
