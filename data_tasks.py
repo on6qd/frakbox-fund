@@ -482,6 +482,14 @@ _COMMODITY_SENSITIVE_ETFS = {
     "MOO", "DBA",             # agribusiness / agriculture
     "XLP", "XLI",             # consumer staples / industrials (food processing, fertilizer)
     "AAL", "DAL", "UAL", "LUV",  # airlines (crude exposure)
+    # Commodity-sensitive broad emerging-market / country index ETFs
+    # (added 2026-04-23 after CL=F -> EEM lag-4 Granger canonical retest failed;
+    # see cl_f_eem_leadlag_canonical_dead_end_2026_04_23 and parent rule
+    # commodity_sector_granger_leadlag_systematic_dead_end_2026_04_20).
+    # EM broad indices have ~40-60% weight in commodity-exporter economies so
+    # Granger->threshold lead-lag produces the same volatility artifact.
+    "EEM", "VWO", "IEMG",     # broad EM index ETFs
+    "EWZ", "EZA", "EWW",      # country ETFs with heavy commodity-export weight
 }
 
 
