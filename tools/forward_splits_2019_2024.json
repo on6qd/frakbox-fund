@@ -1,0 +1,237 @@
+[
+  {
+    "symbol": "AAPL",
+    "split_payable_date": "2020-08-31",
+    "ratio": 4.0
+  },
+  {
+    "symbol": "NVDA",
+    "split_payable_date": "2021-07-20",
+    "ratio": 4.0
+  },
+  {
+    "symbol": "NVDA",
+    "split_payable_date": "2024-06-10",
+    "ratio": 10.0
+  },
+  {
+    "symbol": "AVGO",
+    "split_payable_date": "2024-07-15",
+    "ratio": 10.0
+  },
+  {
+    "symbol": "LRCX",
+    "split_payable_date": "2024-10-03",
+    "ratio": 10.0
+  },
+  {
+    "symbol": "MCHP",
+    "split_payable_date": "2021-10-13",
+    "ratio": 2.0
+  },
+  {
+    "symbol": "FTNT",
+    "split_payable_date": "2022-06-23",
+    "ratio": 5.0
+  },
+  {
+    "symbol": "PANW",
+    "split_payable_date": "2022-09-14",
+    "ratio": 3.0
+  },
+  {
+    "symbol": "PANW",
+    "split_payable_date": "2024-12-16",
+    "ratio": 2.0
+  },
+  {
+    "symbol": "DELL",
+    "split_payable_date": "2021-11-02",
+    "ratio": 1.973
+  },
+  {
+    "symbol": "GOOGL",
+    "split_payable_date": "2022-07-18",
+    "ratio": 20.0
+  },
+  {
+    "symbol": "GOOG",
+    "split_payable_date": "2022-07-18",
+    "ratio": 20.0
+  },
+  {
+    "symbol": "T",
+    "split_payable_date": "2022-04-11",
+    "ratio": 1.324
+  },
+  {
+    "symbol": "MTCH",
+    "split_payable_date": "2020-07-01",
+    "ratio": 3.502
+  },
+  {
+    "symbol": "AMZN",
+    "split_payable_date": "2022-06-06",
+    "ratio": 20.0
+  },
+  {
+    "symbol": "TSLA",
+    "split_payable_date": "2020-08-31",
+    "ratio": 5.0
+  },
+  {
+    "symbol": "TSLA",
+    "split_payable_date": "2022-08-25",
+    "ratio": 3.0
+  },
+  {
+    "symbol": "CMG",
+    "split_payable_date": "2024-06-26",
+    "ratio": 50.0
+  },
+  {
+    "symbol": "WMT",
+    "split_payable_date": "2024-02-26",
+    "ratio": 3.0
+  },
+  {
+    "symbol": "CPRT",
+    "split_payable_date": "2022-11-04",
+    "ratio": 2.0
+  },
+  {
+    "symbol": "CPRT",
+    "split_payable_date": "2023-08-22",
+    "ratio": 2.0
+  },
+  {
+    "symbol": "PCAR",
+    "split_payable_date": "2023-02-08",
+    "ratio": 1.5
+  },
+  {
+    "symbol": "MNST",
+    "split_payable_date": "2023-03-28",
+    "ratio": 2.0
+  },
+  {
+    "symbol": "MKC",
+    "split_payable_date": "2020-12-01",
+    "ratio": 2.0
+  },
+  {
+    "symbol": "WRB",
+    "split_payable_date": "2019-04-03",
+    "ratio": 1.5
+  },
+  {
+    "symbol": "WRB",
+    "split_payable_date": "2022-03-24",
+    "ratio": 1.5
+  },
+  {
+    "symbol": "WRB",
+    "split_payable_date": "2024-07-11",
+    "ratio": 1.5
+  },
+  {
+    "symbol": "NDAQ",
+    "split_payable_date": "2022-08-29",
+    "ratio": 3.0
+  },
+  {
+    "symbol": "HDB",
+    "split_payable_date": "2019-09-26",
+    "ratio": 2.0
+  },
+  {
+    "symbol": "RJF",
+    "split_payable_date": "2021-09-22",
+    "ratio": 1.5
+  },
+  {
+    "symbol": "ISRG",
+    "split_payable_date": "2021-10-05",
+    "ratio": 3.0
+  },
+  {
+    "symbol": "EW",
+    "split_payable_date": "2020-06-01",
+    "ratio": 3.0
+  },
+  {
+    "symbol": "CNC",
+    "split_payable_date": "2019-02-07",
+    "ratio": 2.0
+  },
+  {
+    "symbol": "GE",
+    "split_payable_date": "2023-01-04",
+    "ratio": 1.281
+  },
+  {
+    "symbol": "GE",
+    "split_payable_date": "2024-04-02",
+    "ratio": 1.253
+  },
+  {
+    "symbol": "RTX",
+    "split_payable_date": "2020-04-03",
+    "ratio": 1.589
+  },
+  {
+    "symbol": "FAST",
+    "split_payable_date": "2019-05-23",
+    "ratio": 2.0
+  },
+  {
+    "symbol": "CTAS",
+    "split_payable_date": "2024-09-12",
+    "ratio": 4.0
+  },
+  {
+    "symbol": "XPO",
+    "split_payable_date": "2021-08-02",
+    "ratio": 1.718
+  },
+  {
+    "symbol": "XPO",
+    "split_payable_date": "2022-11-01",
+    "ratio": 1.683
+  },
+  {
+    "symbol": "CSX",
+    "split_payable_date": "2021-06-29",
+    "ratio": 3.0
+  },
+  {
+    "symbol": "FTI",
+    "split_payable_date": "2021-02-16",
+    "ratio": 1.344
+  },
+  {
+    "symbol": "SHW",
+    "split_payable_date": "2021-04-01",
+    "ratio": 3.0
+  },
+  {
+    "symbol": "NEE",
+    "split_payable_date": "2020-10-27",
+    "ratio": 4.0
+  },
+  {
+    "symbol": "EXC",
+    "split_payable_date": "2022-02-02",
+    "ratio": 1.402
+  },
+  {
+    "symbol": "SRE",
+    "split_payable_date": "2023-08-22",
+    "ratio": 2.0
+  },
+  {
+    "symbol": "ETR",
+    "split_payable_date": "2024-12-13",
+    "ratio": 2.0
+  }
+]
