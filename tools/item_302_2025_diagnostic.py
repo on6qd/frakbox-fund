@@ -51,28 +51,20 @@ def main():
     # NOTE: no price filter — relies on cached price data absent. Classifier runs regardless.
 
     def classify_set(events, label):
-        print(f"\nClassifying {len(events)} {label} events with 6 workers...",
+        # Sequential with 0.15s delay per request — stays under SEC's 10 req/s
+        print(f"\nClassifying {len(events)} {label} events sequentially (0.15s delay)...",
               file=sys.stderr)
-
-        def do_cls(idx_e):
-            i, e = idx_e
+        done = 0
+        for i, e in enumerate(events):
+            time.sleep(0.15)
             cls = classify_302_dilution_type(e['cik'], e.get('accession', ''))
-            return i, cls
-
-        with ThreadPoolExecutor(max_workers=2) as ex:
-            futs = {ex.submit(do_cls, (i, e)): i
-                    for i, e in enumerate(events)}
-            done = 0
-            for f in as_completed(futs):
-                i, cls = f.result()
-                e = events[i]
-                e['dilution_type'] = cls['dilution_type']
-                e['classification_confidence'] = cls['confidence']
-                e['classification_patterns'] = cls['matched_patterns']
-                e['excerpt'] = cls.get('excerpt', '')[:300]
-                done += 1
-                if done % 25 == 0:
-                    print(f"  classified: {done}/{len(events)}", file=sys.stderr)
+            e['dilution_type'] = cls['dilution_type']
+            e['classification_confidence'] = cls['confidence']
+            e['classification_patterns'] = cls['matched_patterns']
+            e['excerpt'] = cls.get('excerpt', '')[:300]
+            done += 1
+            if done % 25 == 0:
+                print(f"  classified: {done}/{len(events)}", file=sys.stderr)
         return events
 
     # Only classify 2025+ (2023-2024 already classified in cached results)

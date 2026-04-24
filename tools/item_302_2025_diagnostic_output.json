@@ -1,0 +1,1291 @@
+{
+  "generated_at": "2026-04-24 04:12",
+  "n_events_25plus_largecap": 485,
+  "tier_counts_25plus": {
+    "unknown/low": 199,
+    "share_conversion/high": 99,
+    "m_and_a_related/high": 50,
+    "dilutive_pipe/medium": 7,
+    "dilutive_pipe/low": 103,
+    "dilutive_pipe/high": 13,
+    "m_and_a_related/medium": 4,
+    "strategic_pipe/medium": 6,
+    "strategic_pipe/high": 2,
+    "de_spac_closing/medium": 2
+  },
+  "dilutive_pipe_highmed": [
+    {
+      "ticker": "IMVT",
+      "date": "2025-01-13",
+      "patterns": [
+        "private_placement",
+        "accredited_investors"
+      ],
+      "excerpt": "Item 3.02. Unregistered Sales of Equity Securities. The information contained above in Item 1.01 relating to the Private Placement is hereby incorporated by reference into this Item 3.02. Based in part upon the representations of the Purchasers in the Purchase Agreement, the offering and sale of the"
+    },
+    {
+      "ticker": "TECX",
+      "date": "2025-02-03",
+      "patterns": [
+        "private_placement",
+        "securities_purchase_agreement",
+        "accredited_investors",
+        "registration_rights"
+      ],
+      "excerpt": "Item 3.02. Based in part upon the representations of the Purchasers in the Purchase Agreement, the offering and sale of the Shares will be made in reliance on the exemption afforded by Regulation D of the Securities Act of 1933, as amended (the \"Securities Act\"), and corresponding provisions of stat"
+    },
+    {
+      "ticker": "LTC",
+      "date": "2025-01-14",
+      "patterns": [
+        "sponsor_reference",
+        "private_placement",
+        "accredited_investors"
+      ],
+      "excerpt": "Item 3.02. Unregistered Sales of Equity Securities. Since the sales reported on the most recently filed Current Report on Form 8-K by Grayscale Litecoin Trust (LTC) (the \"Trust\"), the Trust issued 242,900 Shares at varying prices determined by reference to its NAV per Share to selected \"accredited i"
+    },
+    {
+      "ticker": "BCH",
+      "date": "2025-01-14",
+      "patterns": [
+        "sponsor_reference",
+        "private_placement",
+        "accredited_investors"
+      ],
+      "excerpt": "Item 3.02. Unregistered Sales of Equity Securities.   Since the sales reported on the most recently filed Current Report on Form 8-K by Grayscale Bitcoin Cash Trust (BCH) (the \"Trust\"), the Trust issued 461,300 Shares at varying prices determined by reference to its NAV per Share to selected \"accred"
+    },
+    {
+      "ticker": "SPIR",
+      "date": "2025-03-17",
+      "patterns": [
+        "private_placement",
+        "securities_purchase_agreement",
+        "prefunded_warrants",
+        "registration_rights"
+      ],
+      "excerpt": "Item 3.02. Unregistered Sales of Equity Securities.   The disclosures set forth in Item 1.01 above are incorporated by reference into this Item 3.02.   Item 7.01. Regulation FD Disclosure.   On March 13, 2025, the Company issued a press release announcing the Private Placement. A copy of the press r"
+    },
+    {
+      "ticker": "DBVT",
+      "date": "2025-03-31",
+      "patterns": [
+        "private_placement",
+        "securities_purchase_agreement",
+        "accredited_investors",
+        "prefunded_warrants"
+      ],
+      "excerpt": "Item 3.02. None of the New Shares, the ABSA Warrants, the ABSA Warrant Shares, the First PFWs, the First PFW Shares, the BS Warrants, the Second PFWs, and the Second PFW Shares are registered under the Securities Act or any state securities laws. The Company has relied on the exemption from the regi"
+    },
+    {
+      "ticker": "BCH",
+      "date": "2025-04-23",
+      "patterns": [
+        "sponsor_reference",
+        "private_placement",
+        "accredited_investors"
+      ],
+      "excerpt": "Item 3.02. Unregistered Sales of Equity Securities.   Since the sales reported on the most recently filed Current Report on Form 8-K by Grayscale Bitcoin Cash Trust (BCH) (the \"Trust\"), the Trust issued 702,300 Shares at varying prices determined by reference to its NAV per Share to selected \"accred"
+    },
+    {
+      "ticker": "ORIC",
+      "date": "2025-05-28",
+      "patterns": [
+        "private_placement",
+        "securities_purchase_agreement",
+        "prefunded_warrants"
+      ],
+      "excerpt": "Item 3.02.   Item&#8201;7.01 Regulation FD Disclosure. On May 28, 2025, the Company issued a press release announcing that it has entered into the Purchase Agreement. A copy of this press release is attached as Exhibit 99.1 to this Current Report on Form 8-K and is incorporated herein by reference. "
+    },
+    {
+      "ticker": "SBET",
+      "date": "2025-05-30",
+      "patterns": [
+        "prefunded_warrants",
+        "placement_agent"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sale of Equity Securities.   The information contained above in Item 1.01 relating to the issuance of the shares of Common Stock, the Pre-Funded Warrant Shares, the Placement Agent Warrant Shares and the Strategic Advisor Warrant Shares is hereby incorporated by reference into"
+    },
+    {
+      "ticker": "BMNR",
+      "date": "2025-07-09",
+      "patterns": [
+        "private_placement",
+        "securities_purchase_agreement",
+        "accredited_investors",
+        "prefunded_warrants",
+        "placement_agent"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sale of Equity Securities   As previously disclosed in the Company's Current Report on Form 8-K dated July 3, 2025, the Company commenced a private placement offering (the \" Cash Offering \") pursuant to securities purchase agreements (the \" Cash Securities Purchase Agreements "
+    },
+    {
+      "ticker": "HUT",
+      "date": "2025-06-30",
+      "patterns": [
+        "private_placement",
+        "gross_proceeds",
+        "accredited_investors"
+      ],
+      "excerpt": "Item 3.02&#8195; Unregistered Sales of Equity Securities. On June 24, 2025, American Bitcoin Corp. (the \"Company\"), a majority-owned subsidiary of Hut 8 Corp., entered into a Common Stock Purchase Agreement (the \"Purchase Agreement\") for a private placement (the \"Private Placement\") with certain acc"
+    },
+    {
+      "ticker": "MAMA",
+      "date": "2025-09-02",
+      "patterns": [
+        "private_placement",
+        "securities_purchase_agreement",
+        "registration_rights"
+      ],
+      "excerpt": "Item 3.02. Unregistered Sales of Equity Securities.   The disclosure set forth in Item 1.01 of this current report on Form 8-K regarding the Private Placement is incorporated herein by reference.   Item 7.01 Regulation FD Disclosure   On September 2, 2025, the Company issued a press release announci"
+    },
+    {
+      "ticker": "ANIP",
+      "date": "2025-09-26",
+      "patterns": [
+        "private_placement",
+        "aggregate_purchase_price"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities. Item 3.03 Material Modification to Rights of Security Holders. Concurrently with the closing of the acquisition of Novitium Pharma LLC on November 19, 2021, ANI Pharmaceuticals, Inc. (the \"Company\") issued and sold to Ampersand 2020 Limited Partners"
+    },
+    {
+      "ticker": "JBIO",
+      "date": "2025-10-07",
+      "patterns": [
+        "private_placement",
+        "securities_purchase_agreement",
+        "prefunded_warrants",
+        "registration_rights"
+      ],
+      "excerpt": "3.02 Unregistered Sales of Equity Securities. To the extent required by Form 8-K, the disclosures in Item 1.01 above are incorporated herein by reference. Item&#8201;7.01 Regulation FD Disclosure. On October 7, 2025, the Company made available a press release announcing the Private Placement. A copy"
+    },
+    {
+      "ticker": "SMMT",
+      "date": "2025-10-22",
+      "patterns": [
+        "private_placement",
+        "securities_purchase_agreement",
+        "registration_rights"
+      ],
+      "excerpt": "Item 3.02.   Item&#8201;7.01 Regulation FD Disclosure. On October 21, 2025, the Company issued a press release announcing the Private Placement, a copy of which is attached as Exhibit 99.1 to this Current Report on Form 8-K and is incorporated by reference herein. The information in this Item 7.01 o"
+    },
+    {
+      "ticker": "ANRO",
+      "date": "2025-10-20",
+      "patterns": [
+        "private_placement",
+        "securities_purchase_agreement",
+        "accredited_investors",
+        "prefunded_warrants",
+        "registration_rights"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities.   The disclosure regarding the securities to be sold and issued under the Purchase Agreement as set forth under Item 1.01 of this report is incorporated by reference under this Item 3.02.   The securities described above under Item 1.01 have not bee"
+    },
+    {
+      "ticker": "JBIO",
+      "date": "2025-12-15",
+      "patterns": [
+        "private_placement",
+        "securities_purchase_agreement",
+        "registration_rights"
+      ],
+      "excerpt": "Item 3.02.   Item&#8201;7.01. Regulation FD Disclosure. On December 15, 2025, the Company issued a press release announcing the Private Placement. A copy of the press release is attached as Exhibit 99.1 and is incorporated herein by reference. In accordance with General Instruction B.2 of Form 8-K, "
+    },
+    {
+      "ticker": "GHM",
+      "date": "2026-04-15",
+      "patterns": [
+        "securities_purchase_agreement",
+        "registration_rights"
+      ],
+      "excerpt": "Item 3.02.   Item&#8201;7.01. Regulation FD Disclosure. On April 15, 2026, the Company issued a press release announcing the PIPE. A copy of the press release is attached as Exhibit 99.1 to this Current Report on Form 8-K. The information furnished pursuant to this Item 7.01, including Exhibit 99.1,"
+    },
+    {
+      "ticker": "WOLF",
+      "date": "2026-03-26",
+      "patterns": [
+        "private_placement",
+        "securities_purchase_agreement",
+        "gross_proceeds",
+        "prefunded_warrants"
+      ],
+      "excerpt": "Item 3.02 of Form 8-K, the information regarding the Notes Placement set forth under Item 1.01 of this Current Report on Form 8-K is incorporated by reference into this Item 3.02. In addition, as previously disclosed in the Company's Current Report on Form 8-K filed on March 19, 2026, the Company en"
+    },
+    {
+      "ticker": "SPIR",
+      "date": "2026-04-10",
+      "patterns": [
+        "private_placement",
+        "securities_purchase_agreement",
+        "registration_rights"
+      ],
+      "excerpt": "Item 3.02. Unregistered Sales of Equity Securities.   The disclosures set forth in Item 1.01 above are incorporated by reference into this Item 3.02.   Item 7.01. Regulation FD Disclosure.   On April 9, 2026, the Company issued a press release announcing the Private Placement. A copy of the press re"
+    }
+  ],
+  "strategic_pipe": [
+    {
+      "ticker": "INTC",
+      "date": "2025-08-21",
+      "conf": "medium",
+      "patterns": [
+        "private_placement",
+        "securities_purchase_agreement",
+        "megacap_corporate_investor",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02    Unregistered Sales of Equity Securities. On August 18, 2025, Intel Corporation (the \"Company\") entered into a Securities Purchase Agreement (the \"Purchase Agreement\") with SoftBank Group Corp. (\"SoftBank\") pursuant to which SoftBank agreed to purchase 86,956,522 shares of the Company's "
+    },
+    {
+      "ticker": "INTC",
+      "date": "2025-09-18",
+      "conf": "high",
+      "patterns": [
+        "private_placement",
+        "securities_purchase_agreement",
+        "codevelopment",
+        "megacap_corporate_investor",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02    Unregistered Sales of Equity Securities. On September 15, 2025, Intel Corporation (the \"Company\") entered into a Securities Purchase Agreement (the \"Purchase Agreement\") with NVIDIA Corporation (\"NVIDIA\") pursuant to which NVIDIA agreed to purchase 214,776,632 shares of the Company's co"
+    },
+    {
+      "ticker": "INTC",
+      "date": "2025-09-29",
+      "conf": "medium",
+      "patterns": [
+        "private_placement",
+        "securities_purchase_agreement",
+        "megacap_corporate_investor",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02    Unregistered Sales of Equity Securities. On September 26, 2025, Intel Corporation (the \"Company\") completed the issuance and sale of 86,956,522 shares of the Company's common stock, par value $0.001 per share (the \"Shares\"), to SoftBank Group Corp. (\"SoftBank\") at a price per share of $"
+    },
+    {
+      "ticker": "SNPS",
+      "date": "2025-12-01",
+      "conf": "medium",
+      "patterns": [
+        "private_placement",
+        "securities_purchase_agreement",
+        "aggregate_purchase_price",
+        "megacap_corporate_investor",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "3.02 Unregistered Sales of Equity Securities. On December 1, 2025, Synopsys, Inc. (\" Synopsys \") entered into a Securities Purchase Agreement (the \" Purchase Agreement \") with NVIDIA Corporation (\" NVIDIA \"). Pursuant to the Purchase Agreement, NVIDIA purchased 4,821,717 shares of Synopsys' common s"
+    },
+    {
+      "ticker": "INTC",
+      "date": "2025-12-29",
+      "conf": "medium",
+      "patterns": [
+        "private_placement",
+        "securities_purchase_agreement",
+        "megacap_corporate_investor",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02    Unregistered Sales of Equity Securities. On December 26, 2025, Intel Corporation (the \"Company\") completed the issuance and sale of 214,776,632 shares of the Company's common stock, par value $0.001 per share (the \"Shares\"), to NVIDIA Corporation (\"NVIDIA\"), for an aggregate purchase pr"
+    },
+    {
+      "ticker": "CRWV",
+      "date": "2026-01-26",
+      "conf": "medium",
+      "patterns": [
+        "private_placement",
+        "securities_purchase_agreement",
+        "aggregate_purchase_price",
+        "megacap_corporate_investor",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities. On January 23, 2026, CoreWeave, Inc. (the \"Company\") entered into a Securities Purchase Agreement (the \"Purchase Agreement\") with NVIDIA Corporation (\"NVIDIA\"). On January 23, 2026, the Company completed the issuance and sale of 22,935,780 shares of"
+    },
+    {
+      "ticker": "COHR",
+      "date": "2026-03-02",
+      "conf": "medium",
+      "patterns": [
+        "private_placement",
+        "securities_purchase_agreement",
+        "aggregate_purchase_price",
+        "megacap_corporate_investor",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "3.02 Unregistered Sales of Equity Securities. On March 2, 2026, Coherent Corp. (\"Coherent\" or the \"Company\") entered into a Securities Purchase Agreement (the \"Purchase Agreement\") with NVIDIA Corporation (\"NVIDIA\"), and Coherent completed the issuance and sale of 7,788,161 shares of the Company's c"
+    },
+    {
+      "ticker": "NTNX",
+      "date": "2026-02-25",
+      "conf": "high",
+      "patterns": [
+        "private_placement",
+        "strategic_keyword",
+        "megacap_corporate_investor",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02. Unregistered Sales of Equity Securities.   On February 23, 2026, the Company entered into a Stock Purchase Agreement (the \" Stock Purchase Agreement \") with Advanced Micro Devices, Inc. (\" AMD \") pursuant to which AMD agreed to purchase 4,136,789 shares of Class A common stock of the Comp"
+    }
+  ],
+  "dilutive_pipe_low": [
+    {
+      "ticker": "KRP",
+      "date": "2025-01-07",
+      "patterns": [
+        "private_placement",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities.   The information set forth in Item 1.01 of this Current Report on Form 8-K is incorporated by reference into this Item 3.02. The private placement of the Common Units under the Purchase Agreement will be undertaken in reliance upon an exemption fro"
+    },
+    {
+      "ticker": "QUBT",
+      "date": "2025-01-08",
+      "patterns": [
+        "placement_agent"
+      ],
+      "excerpt": "Item 3.02. Unregistered Sales of Equity Securities.   The information under Item 1.01 of this Current Report on Form 8-K related to the Placement Shares, the Placement Agent Warrants, and the Placement Agent Warrant Shares is incorporated herein by reference.   Item&#8201;7.01. Regulation FD Disclos"
+    },
+    {
+      "ticker": "INBX",
+      "date": "2025-01-13",
+      "patterns": [
+        "accredited_investors",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities. The information set forth in Item 1.01 of this Current Report on Form 8-K regarding the Warrants is incorporated by reference herein. The Warrants were issued to the Lenders as partial consideration for the availability and funding of the Term Loan "
+    },
+    {
+      "ticker": "XLO",
+      "date": "2025-02-12",
+      "patterns": [
+        "private_placement",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02. Unregistered Sales of Equity Securities.     Sale of Shares to AbbVie     The description of the issuance and sale of the shares of Common Stock pursuant to the Stock Purchase Agreement set forth under Item 1.01 above under the caption \"Stock Purchase Agreement with AbbVie\" is incorporate"
+    },
+    {
+      "ticker": "SSII",
+      "date": "2025-01-24",
+      "patterns": [
+        "accredited_investors",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02   Unregistered Sales of Equity Securities.   The disclosure set forth in  Item 8.01  of this Current Report on Form 8-K is incorporated into this item by reference.   Item 8.01 Other Events.   Dr. Sudhir Srivastava, our Chairman and Chief Executive Officer, through his Bahamian holding com"
+    },
+    {
+      "ticker": "ONDS",
+      "date": "2025-01-16",
+      "patterns": [
+        "securities_purchase_agreement"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities.   The disclosure included in Item 2.03 of this Current Report on Form 8-K is incorporated herein by reference.   Item 9.01. Financial Statements and Exhibits.   (d) Exhibits   Exhibit No.   Description 4.1   Form of Warrant of Ondas Networks Inc. (i"
+    },
+    {
+      "ticker": "PLUG",
+      "date": "2025-02-10",
+      "patterns": [
+        "accredited_investors",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sale of Equity Securities.   The information set forth in Item 1.01 of this Current Report on Form 8-K is incorporated herein by reference.   The Investor represented to the Company in the Purchase Agreement, among other things, that it is an \"accredited investor\" (as such ter"
+    },
+    {
+      "ticker": "LPTH",
+      "date": "2025-02-13",
+      "patterns": [
+        "private_placement",
+        "securities_purchase_agreement",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities.   The information included in Item 1.01 above is incorporated by reference into this Item 3.02. The Securities described in this Current Report on Form 8-K were offered and will be issued in reliance upon exemptions from registration provided by Sec"
+    },
+    {
+      "ticker": "UPBD",
+      "date": "2025-02-05",
+      "patterns": [
+        "registration_rights",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02. Unregistered Sales of Equity Securities.   The information reported above under Item 2.01 of this Current Report on Form 8-K regarding the Closing Stock Consideration is incorporated herein by reference.   The Closing Stock Consideration was issued pursuant to exemptions from registration"
+    },
+    {
+      "ticker": "VNOM",
+      "date": "2025-01-30",
+      "patterns": [
+        "registration_rights"
+      ],
+      "excerpt": "Item 3.02. Unregistered Sales of Equity Securities. On January 30, 2025, Viper and the Operating Company entered into a separate purchase and sale agreement to acquire from Morita Ranches Minerals, LLC (\"Morita Ranches\") mineral and royalty interests in approximately 1,691 net royalty acres located "
+    },
+    {
+      "ticker": "URGN",
+      "date": "2025-02-20",
+      "patterns": [
+        "accredited_investors",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02. Based in part upon the representations of the IconOVir, the offering and sale of the Company Shares was made in reliance on the exemption afforded by Section 4(a)(2) of the Securities Act of 1933, as amended (the \"Securities Act\"), and Regulation D promulgated thereunder. IconOVir represe"
+    },
+    {
+      "ticker": "LPTH",
+      "date": "2025-02-21",
+      "patterns": [
+        "private_placement",
+        "securities_purchase_agreement",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities.   The information set forth in the Introductory Note above is incorporated by reference into this Item 3.02. The Securities described in this Current Report on Form 8-K were offered and issued in reliance upon exemptions from registration provided b"
+    },
+    {
+      "ticker": "TKO",
+      "date": "2025-02-28",
+      "patterns": [
+        "private_placement",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 by reference. The equity issued as Closing Consideration was offered and sold in private placements exempt from registration under Section 4(a)(2) of the Securities Act of 1933, as amended (the \" Securities Act \").   Item&#8201;7.01. Regulation FD Disclosure. On February 28, 2025, the Comp"
+    },
+    {
+      "ticker": "AESI",
+      "date": "2025-02-24",
+      "patterns": [
+        "registration_rights",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02. Unregistered Sales of Equity Securities.   The information set forth in the \"Introductory Note\" above is incorporated by reference in response to this Item 3.02.   The issuance of the Stock Consideration to the Seller was completed in reliance upon the exemption from the registration requ"
+    },
+    {
+      "ticker": "FANG",
+      "date": "2025-02-18",
+      "patterns": [
+        "securities_purchase_agreement",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02. Unregistered Sales of Equity Securities.   On February 14, 2025, Diamondback Energy, Inc. (the \"Company\") and Diamondback E&P LLC (the \"Purchaser\"), a wholly owned subsidiary of the Company, entered into a definitive securities purchase agreement with Double Eagle IV Midco, LLC (the \"Sell"
+    },
+    {
+      "ticker": "RCL",
+      "date": "2025-03-13",
+      "patterns": [
+        "private_placement",
+        "accredited_investors",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sale of Equity Securities.   On March 12, 2025, Royal Caribbean Cruises Ltd. (the \"Company\") entered into privately negotiated exchange agreements (the \"Exchange Agreements\") with a limited number of existing holders (the \"Noteholders\") of its 6.000% Convertible Senior Notes d"
+    },
+    {
+      "ticker": "RCL",
+      "date": "2025-03-19",
+      "patterns": [
+        "private_placement",
+        "accredited_investors",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities.   The information set forth under Item 8.01 below with respect to the Shares (as defined herein) is incorporated into this Item 3.02 by reference, insofar as it relates to the unregistered sales of equity securities.   Item 8.01 Other Events.   On M"
+    },
+    {
+      "ticker": "NCLH",
+      "date": "2025-04-03",
+      "patterns": [
+        "private_placement",
+        "gross_proceeds",
+        "accredited_investors",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities.   The information set forth under \"Exchangeable Notes Exchange\" in Item 8.01 below is incorporated into this Item 3.02 by reference.   The 2030 Notes (as defined below) are being issued in a private placement in reliance on the exemption from regist"
+    },
+    {
+      "ticker": "NCLH",
+      "date": "2025-04-02",
+      "patterns": [
+        "private_placement",
+        "gross_proceeds",
+        "accredited_investors",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities.   The information set forth under \"Exchangeable Notes Exchange\" in Item 8.01 below is incorporated into this Item 3.02 by reference.   The 2030 Notes (as defined below) are being issued in a private placement in reliance on the exemption from regist"
+    },
+    {
+      "ticker": "QXO",
+      "date": "2025-03-17",
+      "patterns": [
+        "private_placement"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities. See the description set out under Item 1.01 above, which is incorporated by reference into this Item 3.02. Item 8.01 Other Events. On March 17, 2025, the Company issued a press release announcing the Private Placement, a copy of which is attached he"
+    },
+    {
+      "ticker": "NCLH",
+      "date": "2025-04-07",
+      "patterns": [
+        "prospectus_reference",
+        "private_placement",
+        "registered_direct",
+        "accredited_investors",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities.   The information set forth in Item 1.01 above is incorporated into this Item 3.02 by reference.   The 2030 Notes were issued in a private placement in reliance on the exemption from registration provided by Section 4(a)(2) of the Securities Act of "
+    },
+    {
+      "ticker": "JHG",
+      "date": "2025-04-08",
+      "patterns": [
+        "private_placement",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities.   On April 7, 2025, Janus Henderson Group plc (\"JHG\" or the \"Company\") and The Guardian Life Insurance Company of America (\"Guardian\") entered into a definitive transaction agreement (the \"Agreement\"), pursuant to which, in consideration for certain"
+    },
+    {
+      "ticker": "ASTS",
+      "date": "2025-03-24",
+      "patterns": [
+        "prefunded_warrants",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities   The information set forth in \"Item 1.01 Entry into a Material Definitive Agreement\" relating to the Warrant and the Framework Agreement is incorporated by reference herein in their entirety. The Company has issued the Warrant in reliance on the exe"
+    },
+    {
+      "ticker": "LCII",
+      "date": "2025-03-17",
+      "patterns": [
+        "private_placement",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "3.02 Unregistered Sales of Equity Securities. The information set forth under the headings \"Purchase Agreement,\" \"Indenture and the Notes\" and \"Convertible Note Hedge and Warrant Transactions\" under Item 1.01 of this Current Report on Form 8-K is incorporated herein by reference. As described in Ite"
+    },
+    {
+      "ticker": "AORT",
+      "date": "2025-05-14",
+      "patterns": [
+        "accredited_investors",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "3.02 Unregistered Sales of Equity Securities. The disclosure under Item 8.01 below is incorporated by reference herein. The issuance of the Shares (defined below) under the Exchange Agreements (defined below) is being made pursuant to Section 4(a)(2) of the Securities Act of 1933, as amended (the \"S"
+    },
+    {
+      "ticker": "MITK",
+      "date": "2025-04-28",
+      "patterns": [
+        "accredited_investors",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02. Unregistered Sale of Equity Securities The information contained in Item 5.02 of this Current Report on Form 8-K regarding the issuance of the Inducement Awards (as defined below) pursuant to Nasdaq Listing Rule 5635(c)(4) is incorporated by reference. The Inducement Awards were granted i"
+    },
+    {
+      "ticker": "NNE",
+      "date": "2025-05-29",
+      "patterns": [
+        "private_placement",
+        "securities_purchase_agreement",
+        "registration_rights",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities.   The disclosures set forth in Item 1.01 above related to the Private Placement are incorporated by reference into this Item 3.02. The Shares have not been registered under the Securities Act of 1933, as amended (the \" Securities Act \"), pursuant to"
+    },
+    {
+      "ticker": "AORT",
+      "date": "2025-05-29",
+      "patterns": [
+        "accredited_investors",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "3.02 Unregistered Sales of Equity Securities. The disclosure under Item 8.01 below is incorporated by reference herein. The issuance of the Shares (defined below) under the Exchange Agreements (defined below) was made pursuant to Section 4(a)(2) of the Securities Act of 1933, as amended (the \"Securi"
+    },
+    {
+      "ticker": "ASST",
+      "date": "2025-05-27",
+      "patterns": [
+        "accredited_investors",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities.   The information set forth in Item 1.01 of this Current Report on Form 8-K is incorporated herein by reference. The Securities were issued and sold in reliance upon the exemption from registration provided by Section 4(a)(2) of the Securities Act a"
+    },
+    {
+      "ticker": "ATAI",
+      "date": "2025-06-02",
+      "patterns": [
+        "private_placement",
+        "prefunded_warrants",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities On June 2, 2025, the Company entered into (i) the SPA and (ii) the Subscription Agreements, in each case, in a private placement in reliance on the exemption from the registration requirements of the Securities Act. The Common Shares and the Pre-Fund"
+    },
+    {
+      "ticker": "GME",
+      "date": "2025-06-24",
+      "patterns": [
+        "gross_proceeds"
+      ],
+      "excerpt": "Item 3.02 of this Current Report on Form 8-K, and the information set forth under \"Indenture and Notes\" in Item 1.01 included in the Company's Current Report on Form 8-K, filed on June 17, 2025, is incorporated herein by reference. Item 3.02 Unregistered Sales of Equity Securities. As previously rep"
+    },
+    {
+      "ticker": "UMAC",
+      "date": "2025-07-07",
+      "patterns": [
+        "accredited_investors",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities.   The information contained below in Item 5.02 is incorporated by reference into this Item 3.02. The awards were issued to accredited investors and were exempt from registration under Section 4(a)(2) of the Securities Act of 1933.   Item 5.02 Depart"
+    },
+    {
+      "ticker": "LCID",
+      "date": "2025-07-17",
+      "patterns": [
+        "private_placement"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities.   The description of the Subscription Agreement set forth in Item 1.01 above is incorporated by reference into this Item 3.02.   Item 8.01 Other Events.   A copy of the Press Release announcing the Uber robotaxi program, the VPA, and the Private Pla"
+    },
+    {
+      "ticker": "FFBC",
+      "date": "2025-06-23",
+      "patterns": [
+        "accredited_investors",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02      Unregistered Sales of Equity Securities. The information provided in response to Item 1.01 of this Current Report on Form 8-K is incorporated by reference into this Item 3.02. The Company will issue the Stock Consideration in the Acquisition to persons who are \"accredited investors\" a"
+    },
+    {
+      "ticker": "ONTO",
+      "date": "2025-06-30",
+      "patterns": [
+        "accredited_investors",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02. As described in Item 1.01, the Company has agreed to issue 706,215 shares of Common Stock to the Seller pursuant to the Purchase Agreement. The issuance will be exempt from registration pursuant to Section 4(a)(2) of the Securities Act of 1933, as amended (the \"Securities Act\"). The Selle"
+    },
+    {
+      "ticker": "VOR",
+      "date": "2025-06-26",
+      "patterns": [
+        "private_placement",
+        "accredited_investors",
+        "prefunded_warrants",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02. The RemeGen Warrant and the Pre-Funded Warrants have not been registered under the Securities Act of 1933, as amended (the \" Securities Act \"), in reliance on the exemption from registration afforded by Section 4(a)(2) of the Securities Act. The RemeGen Warrantholder has represented that "
+    },
+    {
+      "ticker": "EQBK",
+      "date": "2025-07-08",
+      "patterns": [
+        "registration_rights",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "3.02 Unregistered Sales of Equity Securities Pursuant to the terms of the Agreement, the Company issued 1,729,783 shares of its Class A common stock to the former shareholders of NBC in reliance upon the exemption from the registration requirements of the Securities Act provided by Section 4(a)(2) o"
+    },
+    {
+      "ticker": "STRL",
+      "date": "2025-06-18",
+      "patterns": [
+        "accredited_investors",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "3.02 Unregistered Sales of Equity Securities. The information set forth under Item 1.01 to this Report is incorporated herein by reference. The Shares are being offered and are expected to be issued at the closing of the Acquisition pursuant to an exemption from registration under Section 4(a)(2) of"
+    },
+    {
+      "ticker": "ATAI",
+      "date": "2025-07-01",
+      "patterns": [
+        "private_placement",
+        "prefunded_warrants",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities On July 1, 2025, the Company entered into the Subscription Agreements, in each case, in a private placement in reliance on the exemption from the registration requirements of the Securities Act. The Common Shares and the Pre-Funded Warrant issued in "
+    },
+    {
+      "ticker": "BRO",
+      "date": "2025-08-05",
+      "patterns": [
+        "private_placement",
+        "accredited_investors",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02, consists of unregistered common stock. Such common stock was issued in a private placement exempt from registration under Section 4(a)(2) of the Securities Act of 1933, as amended (the \"Securities Act\") as a transaction by an issuer not involving a public offering and Rule 506 of Regulati"
+    },
+    {
+      "ticker": "ZYME",
+      "date": "2025-08-11",
+      "patterns": [
+        "concurrent_502_board_appointments",
+        "private_placement"
+      ],
+      "excerpt": "3.02 Unregistered Sales of Equity Securities. The information set forth under Item 5.02 of this Current Report on Form 8-K is incorporated herein by reference. Item&#8201;5.02 Departure of Directors or Certain Officers; Election of Directors; Appointment of Certain Officers; Compensatory Arrangement"
+    },
+    {
+      "ticker": "TRON",
+      "date": "2025-09-02",
+      "patterns": [
+        "private_placement",
+        "institutional_investors",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sale of Equity Securities.   As previously disclosed, on June 16, 2025, Tron Inc. (the \" Company \", formerly SRM Entertainment, Inc.) issued warrants to acquire up to 220,000,000 shares of the Company's common stock, par value $0.0001 per share (the \" Common Stock \") at an exe"
+    },
+    {
+      "ticker": "LPTH",
+      "date": "2025-09-15",
+      "patterns": [
+        "private_placement",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities.   The information included in Item 1.01 above is incorporated by reference into this Item 3.02. The Securities described in this Current Report on Form 8-K were offered and will be issued in reliance upon exemptions from registration provided by Sec"
+    },
+    {
+      "ticker": "NCLH",
+      "date": "2025-09-11",
+      "patterns": [
+        "prospectus_reference",
+        "registered_direct",
+        "institutional_investors",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities.   The information set forth in Item 1.01 above is incorporated into this Item 3.02 by reference.   NCLC offered and sold the Exchangeable Notes to the initial purchasers in reliance on the exemption from registration provided by Section 4(a)(2) of t"
+    },
+    {
+      "ticker": "SUN",
+      "date": "2025-09-09",
+      "patterns": [
+        "gross_proceeds",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "3.02 Unregistered Sales of Equity Securities. On September 4, 2025, Sunoco LP, a Delaware limited partnership (the \" Partnership \"), entered into a purchase agreement (the \" Purchase Agreement \"), by and among the Partnership, Sunoco GP LLC, the general partner of the Partnership, and RBC Capital Ma"
+    },
+    {
+      "ticker": "CELH",
+      "date": "2025-08-29",
+      "patterns": [
+        "accredited_investors",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02. The Company offered and sold the shares of Series B Preferred Stock to PepsiCo in reliance on the exemption from registration under the Securities Act provided by Section 4(a)(2) thereof. Under the Series B Purchase Agreement, PepsiCo represented that it is an \"accredited investor\" as def"
+    },
+    {
+      "ticker": "APLD",
+      "date": "2025-08-29",
+      "patterns": [
+        "registration_rights",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities.   The information set forth in \"Item 1.01 Entry into a Material Definitive Agreement\" relating to the issuance of the Building 4 Warrant and the underlying Building 4 Warrant Shares is incorporated by reference herein in its entirety.   The Building"
+    },
+    {
+      "ticker": "ASST",
+      "date": "2025-08-28",
+      "patterns": [
+        "accredited_investors",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities.   The information set forth in Item 1.01 of this Current Report on Form 8-K is incorporated herein by reference. The Securities were issued and sold in reliance upon the exemption from registration provided by Section 4(a)(2) of the Securities Act a"
+    },
+    {
+      "ticker": "NNE",
+      "date": "2025-10-10",
+      "patterns": [
+        "private_placement",
+        "securities_purchase_agreement",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities.   The disclosures set forth in Item 1.01 above related to the Private Placement are incorporated by reference into this Item 3.02. The Shares have not been registered under the Securities Act of 1933, as amended (the \" Securities Act \"), pursuant to"
+    },
+    {
+      "ticker": "AMD",
+      "date": "2025-10-06",
+      "patterns": [
+        "registration_rights"
+      ],
+      "excerpt": "Item 3.02. Item&#8201;7.01 Regulation FD Disclosure. Attached hereto as Exhibit 99.1 is a copy of the press release with the Company's announcement regarding the execution of the Agreement and issuance of the Warrant. The information in this Current Report on Form 8-K furnished pursuant to Item 7.01"
+    },
+    {
+      "ticker": "MUX",
+      "date": "2025-10-16",
+      "patterns": [
+        "private_placement"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities.   The information set forth in Item 1.01 above is incorporated by reference into this Item 3.02. The Company Shares issued pursuant to the Arrangement Agreement will be issued in a private placement pursuant to the exemption from registration provid"
+    },
+    {
+      "ticker": "BXP",
+      "date": "2025-09-29",
+      "patterns": [
+        "registration_rights",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02. Unregistered Sales of Equity Securities. The disclosure set forth in Item 1.01 above is incorporated by reference into this Item 3.02. The Notes were issued to the initial purchasers in reliance upon Section 4(a)(2) of the Securities Act in transactions not involving any public offering. "
+    },
+    {
+      "ticker": "ZBIO",
+      "date": "2025-10-08",
+      "patterns": [
+        "private_placement",
+        "securities_purchase_agreement",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities   The disclosure regarding the securities to be sold and issued pursuant to the InnoCare Subscription Agreement and the Securities Purchase Agreement set forth under Item 1.01 of this Current Report on Form 8-K is incorporated by reference under this"
+    },
+    {
+      "ticker": "NRGV",
+      "date": "2025-09-26",
+      "patterns": [
+        "registration_rights",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "3.02 Unregistered Sales of Equity Securities. Debentures The disclosure set forth above in Item 1.01 of this Current Report relating to the issuance of shares of Common Stock to the Investor pursuant to the Purchase Agreement, including any shares to be issued in connection with a conversion of the "
+    },
+    {
+      "ticker": "KALV",
+      "date": "2025-09-29",
+      "patterns": [
+        "private_placement",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "3.02. Unregistered Sales of Equity Securities. The information set forth in Item 8.01 of this Current Report on Form 8-K under the headings \"Purchase Agreement\" and \"Indenture\" is incorporated herein by reference. Item&#8201;8.01. Other Events. Purchase Agreement On September 24, 2025, the Company e"
+    },
+    {
+      "ticker": "BKV",
+      "date": "2025-10-01",
+      "patterns": [
+        "private_placement",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02.&#8239;&#8239;&#8239;&#8239;&#8239; Unregistered Sales of Equity Securities.   Pursuant to the terms of the Purchase Agreement, at the Closing, BKV issued the 5,233,957 shares of Common Stock comprising the Stock Consideration. The Stock Consideration was issued in a private placement exem"
+    },
+    {
+      "ticker": "TNGX",
+      "date": "2025-10-24",
+      "patterns": [
+        "private_placement",
+        "registered_direct",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 of Form 8-K, the information regarding the Private Placement set forth under Item 1.01 of this Current Report on Form 8-K is incorporated by reference in this Item 3.02. The PIPE Shares issued and sold in the Private Placement are being offered pursuant to Section 4(a)(2) of the Securities"
+    },
+    {
+      "ticker": "STX",
+      "date": "2025-11-13",
+      "patterns": [
+        "private_placement",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 by reference. The Exchanges (as defined below) were conducted as private placements, and the aggregate of 4,313,941 ordinary shares issued in the Exchanges were issued pursuant to the exemption from the registration requirements of the Securities Act of 1933, as amended (the \"Securities Ac"
+    },
+    {
+      "ticker": "FFBC",
+      "date": "2025-11-03",
+      "patterns": [
+        "accredited_investors",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02      Unregistered Sales of Equity Securities. The information provided in Section 8.01 of this Current Report on Form 8-K (this \" Report \") is incorporated by reference into this Item 3.02. On November 1, First Financial Bancorp., an Ohio corporation (the \" Company \"), issued 2,753,094 sha"
+    },
+    {
+      "ticker": "STX",
+      "date": "2025-11-05",
+      "patterns": [
+        "private_placement",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 by reference. The Exchanges (as defined below) are being conducted as private placements, and any ordinary shares to be issued in the Exchanges will be issued pursuant to the exemption from the registration requirements of the Securities Act of 1933, as amended (the \"Securities Act\"), affo"
+    },
+    {
+      "ticker": "GPRE",
+      "date": "2025-10-28",
+      "patterns": [
+        "accredited_investors",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02. Unregistered Sales of Equity Securities. The information disclosed in Item 1.01 is incorporated by reference into this Item 3.02. The 2030 Notes were issued in reliance upon the exemption from registration provided by Section 4(a)(2) of the Securities Act. In determining that the issuance"
+    },
+    {
+      "ticker": "NVTS",
+      "date": "2025-11-10",
+      "patterns": [
+        "securities_purchase_agreement",
+        "registration_rights",
+        "placement_agent",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities.   The information contained in Item 1.01 of this Current Report on Form 8-K in relation to the Shares is incorporated herein by reference. The Shares were issued in reliance on the exemptions from registration provided by Section 4(a)(2) under the S"
+    },
+    {
+      "ticker": "AVR",
+      "date": "2025-10-24",
+      "patterns": [
+        "gross_proceeds",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02. Unregistered Sales of Equity Securities.   On or about October 23,   2025 (October 24,   2025 AEST), Anteris Technologies Global Corp. (the \"Company\") entered into (i) subscription agreements  (the \"Subscription Agreements\") with certain investors, pursuant to which we agreed to sell 2,24"
+    },
+    {
+      "ticker": "ASTS",
+      "date": "2025-10-29",
+      "patterns": [
+        "prospectus_reference",
+        "registered_direct"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities.   The information contained in Item 8.01 of this Current Report on Form 8-K under the heading \"Option Notes\" is incorporated herein by reference.   Item 8.01 Other Events.   Equity Offering   On October 29, 2025, AST SpaceMobile, Inc. (the \"Company\""
+    },
+    {
+      "ticker": "ONDS",
+      "date": "2025-11-17",
+      "patterns": [
+        "registration_rights"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities.   The disclosure included in Item 2.01 of this Current Report on Form 8-K is incorporated herein by reference. The issuances of the Shares and the Additional Stock Consideration in Item 2.01 above is exempt from the registration requirements of the "
+    },
+    {
+      "ticker": "CTRI",
+      "date": "2025-11-14",
+      "patterns": [
+        "private_placement",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "3.02      Unregistered Sales of Equity Securities. The information set forth in Item 1.01 above regarding the Concurrent Private Placement is incorporated herein by reference. The Private Placement Shares will be issued in reliance on exemptions from registration provided by Section 4(a)(2) under th"
+    },
+    {
+      "ticker": "ONTO",
+      "date": "2025-11-17",
+      "patterns": [
+        "accredited_investors",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02. Unregistered Sale of Equity Securities As described in Item 2.01, the Company issued 641,771 shares of Common Stock to the Seller pursuant to the Purchase Agreement. The issuance was exempt from registration pursuant to Section 4(a)(2) of the Securities Act of 1933, as amended (the \"Secur"
+    },
+    {
+      "ticker": "ASPI",
+      "date": "2025-11-14",
+      "patterns": [
+        "registration_rights"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities.   The information set forth in Item 1.01 above under the heading \" Offering of Convertible Notes of Quantum Leap Energy LLC \" is incorporated herein by reference.   Forward-Looking Statements   Statements contained herein relating to future plans, r"
+    },
+    {
+      "ticker": "SANM",
+      "date": "2025-10-31",
+      "patterns": [
+        "private_placement",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "3.02 Unregistered Sales of Equity Securities   On the Closing Date, as part of the consideration for the Acquisition, Sanmina issued to the Seller shares of Sanmina common stock, par value $0.01 per share, having an aggregate value of $150 million, calculated in accordance with the Purchase Agreemen"
+    },
+    {
+      "ticker": "CNX",
+      "date": "2025-12-16",
+      "patterns": [
+        "private_placement",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02. Unregistered Sales of Equity Securities. The information set forth under Item 8.01 is incorporated into this Item 3.02 by reference. The Exchanges (as defined below) are being conducted as private placements, and any shares of common stock to be issued in the Exchanges will be issued purs"
+    },
+    {
+      "ticker": "CNX",
+      "date": "2025-12-17",
+      "patterns": [
+        "private_placement",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02. Unregistered Sales of Equity Securities. The information set forth under Item 8.01 is incorporated into this Item 3.02 by reference. The Exchanges (as defined below) were conducted as private placements, and the shares of common stock issued in the Exchanges were issued pursuant to the ex"
+    },
+    {
+      "ticker": "NFG",
+      "date": "2025-12-15",
+      "patterns": [
+        "gross_proceeds",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02. The shares of common stock being sold pursuant to the Subscription Agreement are being sold and issued without registration under the Securities Act, in reliance on the exemptions provided by Section 4(a)(2) of the Securities Act as a transaction not involving a public offering and Rule 5"
+    },
+    {
+      "ticker": "MIRM",
+      "date": "2025-12-19",
+      "patterns": [
+        "private_placement",
+        "accredited_investors",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 by reference. Based in part upon the representations of the PIPE Investors in the Subscription Agreement, the offering and sale of the securities in the Private Placement will be made in reliance on the exemptions afforded by Section 4(a)(2) of the Securities Act and/or Rule 506 of Regulat"
+    },
+    {
+      "ticker": "ITT",
+      "date": "2025-12-05",
+      "patterns": [
+        "private_placement",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02, will consist of unregistered shares of common stock of ITT. Such common stock will be issued in a private placement exempt from registration under Section 4(a)(2) of the Securities Act of 1933, as amended (the \"Securities Act\"). Pursuant to the Purchase Agreement, the Seller will not, sub"
+    },
+    {
+      "ticker": "VOR",
+      "date": "2025-12-18",
+      "patterns": [
+        "private_placement",
+        "accredited_investors",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities. The disclosures set forth in Item 1.01 above regarding the Private Placement are incorporated into this Item 3.02. The Shares have not been registered under the Securities Act of 1933, as amended (the \"Securities Act\"), in reliance on the exemption "
+    },
+    {
+      "ticker": "BWIN",
+      "date": "2025-12-02",
+      "patterns": [
+        "accredited_investors",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities. The disclosure contained in Item 1.01 above with respect to the issuance of the Equity Consideration is hereby incorporated by reference into this Item 3.02. Pursuant to certain other agreements entered into by the Company with respect to other pend"
+    },
+    {
+      "ticker": "MIRM",
+      "date": "2025-12-08",
+      "patterns": [
+        "private_placement",
+        "accredited_investors",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 by reference. Based in part upon the representations of the Target security holders in suitability documentation to be delivered by the Target security holders as a condition to receipt of their respective Stock Consideration, the issuance of the Stock Consideration will be issued in a tra"
+    },
+    {
+      "ticker": "NRGV",
+      "date": "2025-12-19",
+      "patterns": [
+        "securities_purchase_agreement",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "3.02 Unregistered Sales of Equity Securities. The disclosure set forth above in Item 2.03 of this Current Report relating to the issuance of shares of Common Stock to the Investor pursuant to the Purchase Agreement, including any shares to be issued in connection with a conversion of the Debentures,"
+    },
+    {
+      "ticker": "USAC",
+      "date": "2026-01-14",
+      "patterns": [
+        "registration_rights",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities. The information regarding the Common Units issued to the Seller in connection with the consummation of the Acquisition set forth in the Introductory Note and Item 2.01 of this Current Report on Form 8-K is incorporated by reference into this Item 3."
+    },
+    {
+      "ticker": "VST",
+      "date": "2026-01-05",
+      "patterns": [
+        "accredited_investors",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02. The shares of Vistra common stock comprising the Stock Consideration will be issued in reliance on the exemption from registration requirements provided by Section 4(a)(2) of the Securities Act of 1933, as amended (the \"Securities Act\") to a person who is an \"accredited investor\" as that "
+    },
+    {
+      "ticker": "WBTN",
+      "date": "2026-01-08",
+      "patterns": [
+        "private_placement",
+        "securities_purchase_agreement",
+        "aggregate_purchase_price",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities. On January 8, 2026, WEBTOON Entertainment Inc. (the \"Company\") entered into a Securities Purchase Agreement (the \"Purchase Agreement\") with a wholly owned indirect subsidiary of The Walt Disney Company (\"Disney\"), pursuant to which Disney purchased "
+    },
+    {
+      "ticker": "GLTO",
+      "date": "2026-01-06",
+      "patterns": [
+        "accredited_investors",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 &#8211; Unregistered Sales of Equity Securities. On December 31, 2025, in accordance with that certain antibody discovery and option agreement by and among Galecto, Inc. (the \"Company\"), Paragon Therapeutics, Inc., and Paramora Holding LLC (\"Paramora\") dated October 7, 2025 (the \"Paragon O"
+    },
+    {
+      "ticker": "PR",
+      "date": "2025-12-22",
+      "patterns": [
+        "accredited_investors",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "3.02 Unregistered Sales of Equity Securities. In connection with the Reorganization, pursuant to the Share Surrender and Unit Exchange Agreement, New PR is expected to issue 48,916,754 New PR Class A Shares to the Contributing Members immediately following the Effective Time. The New PR Class A Shar"
+    },
+    {
+      "ticker": "STX",
+      "date": "2026-02-19",
+      "patterns": [
+        "private_placement",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 by reference. The Exchanges (as defined below) were conducted as private placements, and the aggregate of 5,952,309 ordinary shares issued in the Exchanges were issued pursuant to the exemption from the registration requirements of the Securities Act of 1933, as amended (the \"Securities Ac"
+    },
+    {
+      "ticker": "STX",
+      "date": "2026-02-12",
+      "patterns": [
+        "private_placement",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 by reference. The Exchanges (as defined below) are being conducted as private placements, and any ordinary shares to be issued in the Exchanges will be issued pursuant to the exemption from the registration requirements of the Securities Act of 1933, as amended (the \"Securities Act\"), affo"
+    },
+    {
+      "ticker": "AVR",
+      "date": "2026-01-22",
+      "patterns": [
+        "prospectus_reference",
+        "private_placement",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02. Unregistered Sales of Equity Securities. The information set forth in Item 1.01 of this Current Report on Form 8-K related to the PIPE Shares is hereby incorporated by reference into this Item 3.02. The issuance and sale of the PIPE Shares pursuant to the Purchase Agreement was made in re"
+    },
+    {
+      "ticker": "LXRX",
+      "date": "2026-02-02",
+      "patterns": [
+        "private_placement",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 by reference. A total of 23,100,000 shares of Common Stock are issuable upon conversion of the maximum issuable number of shares Preferred Stock pursuant to the Preferred Private Placement. The Concurrent Private Placement, the Preferred Private Placement and the issuance of any Common Sto"
+    },
+    {
+      "ticker": "MBLY",
+      "date": "2026-02-05",
+      "patterns": [
+        "large_single_issuance_26229714",
+        "aggregate_purchase_price",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "3.02. Unregistered Sales of Equity Securities.   As previously announced, on January 5, 2026 (the \"Signing Date\"), Mobileye Global Inc. (the \"Corporation\"), a Delaware corporation, and Mobileye Vision Technologies Ltd. (\"MEIL\"), a company organized under the laws of the State of Israel and a subsidi"
+    },
+    {
+      "ticker": "BKV",
+      "date": "2026-01-30",
+      "patterns": [
+        "private_placement",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02.&#8239;&#8239;&#8239;&#8239;&#8239; Unregistered Sales of Equity Securities.   Pursuant to the terms of the Purchase Agreement, at the Closing, BKV issued the 5,315,390 shares of BKV common stock comprising the Stock Consideration. The Stock Consideration was issued in a private placement "
+    },
+    {
+      "ticker": "USAR",
+      "date": "2026-01-29",
+      "patterns": [
+        "private_placement"
+      ],
+      "excerpt": "Item 3.02    Unregistered Sales of Equity Securities The information under Item 1.01 of this Current Report on Form 8-K related to the Securities is incorporated herein by reference. This Current Report on Form 8-K does not constitute an offer to sell any securities or a solicitation of an offer to "
+    },
+    {
+      "ticker": "ESAB",
+      "date": "2026-02-02",
+      "patterns": [
+        "private_placement",
+        "aggregate_purchase_price",
+        "institutional_investors",
+        "placement_agent",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities.   Mandatory Convertible Preferred Stock   On February 2, 2026, the Company offered and agreed to issue and sell 175,000 shares (the \" Preferred Shares \") of a newly created series of convertible preferred stock, designated as 6.50% Series A Mandator"
+    },
+    {
+      "ticker": "USAR",
+      "date": "2026-01-26",
+      "patterns": [
+        "private_placement"
+      ],
+      "excerpt": "3.02. Unregistered Sales of Equity Securities   The information under Item 1.01 of this Current Report on Form 8-K related to the Shares is incorporated herein by reference.   This Current Report on Form 8-K does not constitute an offer to sell any securities or a solicitation of an offer to buy any"
+    },
+    {
+      "ticker": "AMD",
+      "date": "2026-02-24",
+      "patterns": [
+        "registration_rights",
+        "megacap_corporate_investor"
+      ],
+      "excerpt": "Item 3.02.&#8239;&#8239;&#8239; Item 7.01&#8239;Regulation&#8239;FD Disclosure.&#8239; &#8239; Attached hereto as Exhibit 99.1 is a copy of the press release with AMD's announcement&#8239;regarding&#8239;the strategic arrangement and issuance of the Warrant.&#8239;&#8239;&#8239; The information in t"
+    },
+    {
+      "ticker": "ANRO",
+      "date": "2026-03-16",
+      "patterns": [
+        "private_placement",
+        "securities_purchase_agreement",
+        "prefunded_warrants",
+        "registration_rights",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities.   The disclosure regarding the securities to be sold and issued under the Purchase Agreement as set forth under Item 1.01 of this report is incorporated by reference under this Item 3.02.   The securities described above under Item 1.01 have not bee"
+    },
+    {
+      "ticker": "SLDB",
+      "date": "2026-03-06",
+      "patterns": [
+        "private_placement",
+        "securities_purchase_agreement",
+        "accredited_investors",
+        "prefunded_warrants",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02. Based in part upon the representations of the Investors in the Securities Purchase Agreement, the offering and sale of the Shares and the Pre-Funded Warrants will be exempt from registration under Section 4(a)(2) of the Securities Act. The Shares and Pre-Funded Warrants have not been regi"
+    },
+    {
+      "ticker": "SEI",
+      "date": "2026-03-20",
+      "patterns": [
+        "securities_purchase_agreement",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02. The issuance of the Equity Consideration to the Sellers was completed in reliance upon the exemption from the registration requirements of the Securities Act of 1933, as amended, provided by Section 4(a)(2) thereof as a transaction by an issuer not involving any public offering. The Compa"
+    },
+    {
+      "ticker": "SSII",
+      "date": "2026-03-09",
+      "patterns": [
+        "private_placement",
+        "gross_proceeds",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities.   On March 6, 2026 (the \" Closing Date \"), the Company completed a private placement of its common stock which generated approximately $18.6 million in gross proceeds, before deducting offering expenses.   In the offering, we offered and sold a tota"
+    },
+    {
+      "ticker": "VIR",
+      "date": "2026-02-23",
+      "patterns": [
+        "accredited_investors",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities. The information under Item 1.01 of this Current Report on Form 8-K is incorporated herein by reference. Vir Bio offered and sold the shares of Common Stock to Astellas pursuant to the SPA in reliance on the exemption from registration provided by Se"
+    },
+    {
+      "ticker": "VOR",
+      "date": "2026-03-27",
+      "patterns": [
+        "private_placement",
+        "securities_purchase_agreement",
+        "accredited_investors",
+        "registration_rights",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities. The disclosures set forth in Item 1.01 above regarding the Private Placement are incorporated into this Item 3.02.   The Shares have not been registered under the Securities Act of 1933, as amended (the \"Securities Act\"), in reliance on the exemptio"
+    },
+    {
+      "ticker": "TRON",
+      "date": "2026-04-08",
+      "patterns": [
+        "private_placement",
+        "institutional_investors",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities.   As previously disclosed, on June 16, 2025, Tron Inc. (the \" Company \") issued 100,000 shares of its Series B Convertible Preferred Stock, par value $0.0001 per share (the \" Series B Preferred Stock \") convertible into 200,000,000 shares of the Com"
+    },
+    {
+      "ticker": "VTS",
+      "date": "2026-04-10",
+      "patterns": [
+        "registration_rights",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02    Unregistered Sales of Equity Securities On April 8, 2026, Vitesse Energy, Inc. (the \"Company\") issued 1,935,698 shares of common stock, par value $0.01 per share, of the Company (the \"common stock\"), to a third party seller (\"Seller\") in exchange for certain non-operated oil and gas ass"
+    },
+    {
+      "ticker": "CRWV",
+      "date": "2026-04-15",
+      "patterns": [
+        "private_placement",
+        "securities_purchase_agreement",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02 Unregistered Sales of Equity Securities. On April 15, 2026, CoreWeave, Inc. (the \"Company\") entered into a Securities Purchase Agreement (the \"Purchase Agreement\") with Jane Street Global Trading, LLC (\"Jane Street\"). On April 15, 2026, the Company completed the issuance and sale of 9,174,"
+    },
+    {
+      "ticker": "BMNR",
+      "date": "2026-03-30",
+      "patterns": [
+        "accredited_investors",
+        "registration_rights",
+        "section_4a2_private_exempt"
+      ],
+      "excerpt": "Item 3.02. Unregistered Sales of Equity Securities   The information set forth under Item 1.01 above is incorporated herein by reference. On March 24, 2026, in connection with the closing of the Acquisition, the Company issued 501,545 shares of its Common Stock to the Sellers as the Stock Considerat"
+    }
+  ]
+}
