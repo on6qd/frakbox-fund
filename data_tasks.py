@@ -1183,6 +1183,9 @@ def cmd_threshold(args):
         else:
             summary["canonical_passes"] = canonical.get("passes", False)
             summary["canonical_fail_reason"] = canonical.get("fail_reason")
+            summary["canonical_benchmark"] = canonical.get("benchmark")
+            summary["canonical_benchmark_mode"] = canonical.get("benchmark_mode")
+            summary["canonical_target_class"] = canonical.get("target_class")
             summary["canonical_n_pooled"] = canonical.get("n_events_pooled")
             summary["canonical_n_recent"] = canonical.get("n_events_recent")
             pooled = canonical.get("pooled", {})

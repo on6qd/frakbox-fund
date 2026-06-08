@@ -800,7 +800,7 @@ def canonical_retest_threshold(
     horizons: list[int] | None = None,
     start: str = "2010-01-01",
     end: str | None = None,
-    benchmark: str = "SPY",
+    benchmark: str | None = "auto",
     recency_split: str = "2020-01-01",
 ) -> dict:
     """
@@ -817,10 +817,21 @@ def canonical_retest_threshold(
     Used to validate threshold-mode scan hits before queueing them.
     """
     from tools.timeseries import get_series
+    from tools.asset_class import classify_asset, resolve_event_benchmark
     import market_data
 
     if horizons is None:
         horizons = [1, 3, 5, 10, 20]
+
+    # Benchmark-class guard: for non-equity targets (Treasuries/commodities/FX/
+    # crypto) SPY-adjustment injects an equity-market signal into the "abnormal"
+    # return and produces false PASSes. Auto-resolve to raw returns (benchmark
+    # None) unless the caller explicitly forced a benchmark.
+    # See threshold_canonical_retest_nonequity_benchmark_invalid_rule_2026_06_08.
+    target_class = classify_asset(target_symbol)
+    if benchmark == "auto":
+        benchmark = resolve_event_benchmark(target_symbol)
+    benchmark_mode = "spy_adjusted" if benchmark else "raw_returns_nonequity"
 
     # Fetch trigger series
     try:
@@ -912,13 +923,15 @@ def canonical_retest_threshold(
         fail_reason = None
 
     return {
-        "method": f"first_close_cluster_buffered_{cluster_days}d_SPY_adjusted_dual_sample",
+        "method": f"first_close_cluster_buffered_{cluster_days}d_{benchmark_mode}_dual_sample",
         "trigger": trigger_identifier,
         "target": target_symbol,
+        "target_class": target_class,
         "threshold": threshold,
         "direction": direction,
         "cluster_days": cluster_days,
         "benchmark": benchmark,
+        "benchmark_mode": benchmark_mode,
         "n_events_pooled": pooled.get("n_events"),
         "n_events_recent": recent.get("n_events"),
         "pooled": pooled,

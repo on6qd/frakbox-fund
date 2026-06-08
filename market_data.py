@@ -255,7 +255,13 @@ def get_price_around_date(symbol, event_date, days_before=5, days_after=20,
     if stock_df.empty:
         return {"error": f"No data for {symbol} around {event_date} (tried yfinance and Tiingo)"}
 
-    bench_df = _fetch_stock_data(benchmark, start_str, end_str) if symbol != benchmark else stock_df
+    # benchmark=None -> raw-returns mode (abnormal == raw). Used for non-equity
+    # targets (Treasuries/commodities/FX/crypto) where SPY-adjustment is invalid.
+    # See tools/asset_class.resolve_event_benchmark.
+    if benchmark is None:
+        bench_df = pd.DataFrame()
+    else:
+        bench_df = _fetch_stock_data(benchmark, start_str, end_str) if symbol != benchmark else stock_df
 
     # Build date-indexed lookups (close and open)
     stock_by_date = {d.strftime("%Y-%m-%d"): round(row["Close"], 2) for d, row in stock_df.iterrows()}
