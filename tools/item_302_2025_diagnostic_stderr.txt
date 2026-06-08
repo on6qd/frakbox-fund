@@ -1,0 +1,32 @@
+2025+ events with tickers: 2897
+2023-2024 events with tickers: 3873
+
+2025+ largecap: 485 (missing cap: 687)
+2023-2024 largecap: 637 (missing cap: 1086)
+To classify (not in cache): 485
+
+Classifying 485 2025+ largecap events sequentially (0.15s delay)...
+  classified: 25/485
+  classified: 50/485
+  classified: 75/485
+  classified: 100/485
+  classified: 125/485
+  classified: 150/485
+  classified: 175/485
+  classified: 200/485
+  classified: 225/485
+  classified: 250/485
+  classified: 275/485
+  classified: 300/485
+  classified: 325/485
+  classified: 350/485
+  classified: 375/485
+  classified: 400/485
+  classified: 425/485
+  classified: 450/485
+  classified: 475/485
+Saved 485 successful classifications to cache
+
+Fetch errors (HTTP 4xx/5xx, rate-limit etc): 0
+
+Wrote tools/item_302_2025_diagnostic_output.json

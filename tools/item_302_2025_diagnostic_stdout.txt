@@ -1,0 +1,56 @@
+
+=== 2025-2026 LARGE-CAP CLASSIFICATION BREAKDOWN (n=485) ===
+  unknown                  low        199
+  dilutive_pipe            low        103
+  share_conversion         high       99
+  m_and_a_related          high       50
+  dilutive_pipe            high       13
+  dilutive_pipe            medium     7
+  strategic_pipe           medium     6
+  m_and_a_related          medium     4
+  strategic_pipe           high       2
+  de_spac_closing          medium     2
+
+Dilutive_pipe high/med: 20 (expected 0)
+  IMVT 2025-01-13 mcap=$4.7B patterns=['private_placement', 'accredited_investors']
+  TECX 2025-02-03 mcap=$0.6B patterns=['private_placement', 'securities_purchase_agreement', 'accredited_investors', 'registration_rights']
+  LTC 2025-01-14 mcap=$1.9B patterns=['sponsor_reference', 'private_placement', 'accredited_investors']
+  BCH 2025-01-14 mcap=$19.9B patterns=['sponsor_reference', 'private_placement', 'accredited_investors']
+  SPIR 2025-03-17 mcap=$0.7B patterns=['private_placement', 'securities_purchase_agreement', 'prefunded_warrants', 'registration_rights']
+  DBVT 2025-03-31 mcap=$1.3B patterns=['private_placement', 'securities_purchase_agreement', 'accredited_investors', 'prefunded_warrants']
+  BCH 2025-04-23 mcap=$19.9B patterns=['sponsor_reference', 'private_placement', 'accredited_investors']
+  ORIC 2025-05-28 mcap=$1.3B patterns=['private_placement', 'securities_purchase_agreement', 'prefunded_warrants']
+  SBET 2025-05-30 mcap=$1.3B patterns=['prefunded_warrants', 'placement_agent']
+  BMNR 2025-07-09 mcap=$9.6B patterns=['private_placement', 'securities_purchase_agreement', 'accredited_investors', 'prefunded_warrants', 'placement_agent']
+  HUT 2025-06-30 mcap=$7.3B patterns=['private_placement', 'gross_proceeds', 'accredited_investors']
+  MAMA 2025-09-02 mcap=$0.6B patterns=['private_placement', 'securities_purchase_agreement', 'registration_rights']
+  ANIP 2025-09-26 mcap=$1.7B patterns=['private_placement', 'aggregate_purchase_price']
+  JBIO 2025-10-07 mcap=$0.7B patterns=['private_placement', 'securities_purchase_agreement', 'prefunded_warrants', 'registration_rights']
+  SMMT 2025-10-22 mcap=$12.0B patterns=['private_placement', 'securities_purchase_agreement', 'registration_rights']
+  ANRO 2025-10-20 mcap=$0.7B patterns=['private_placement', 'securities_purchase_agreement', 'accredited_investors', 'prefunded_warrants', 'registration_rights']
+  JBIO 2025-12-15 mcap=$0.7B patterns=['private_placement', 'securities_purchase_agreement', 'registration_rights']
+  GHM 2026-04-15 mcap=$0.9B patterns=['securities_purchase_agreement', 'registration_rights']
+  WOLF 2026-03-26 mcap=$0.7B patterns=['private_placement', 'securities_purchase_agreement', 'gross_proceeds', 'prefunded_warrants']
+  SPIR 2026-04-10 mcap=$0.7B patterns=['private_placement', 'securities_purchase_agreement', 'registration_rights']
+
+Strategic_pipe: 8
+  INTC 2025-08-21 mcap=$221.5B conf=medium patterns=['private_placement', 'securities_purchase_agreement', 'megacap_corporate_investor', 'section_4a2_private_exempt']
+  INTC 2025-09-18 mcap=$221.5B conf=high patterns=['private_placement', 'securities_purchase_agreement', 'codevelopment', 'megacap_corporate_investor', 'section_4a2_private_exempt']
+  INTC 2025-09-29 mcap=$221.5B conf=medium patterns=['private_placement', 'securities_purchase_agreement', 'megacap_corporate_investor', 'section_4a2_private_exempt']
+  SNPS 2025-12-01 mcap=$83.8B conf=medium patterns=['private_placement', 'securities_purchase_agreement', 'aggregate_purchase_price', 'megacap_corporate_investor', 'section_4a2_private_exempt']
+  INTC 2025-12-29 mcap=$221.5B conf=medium patterns=['private_placement', 'securities_purchase_agreement', 'megacap_corporate_investor', 'section_4a2_private_exempt']
+  CRWV 2026-01-26 mcap=$42.8B conf=medium patterns=['private_placement', 'securities_purchase_agreement', 'aggregate_purchase_price', 'megacap_corporate_investor', 'section_4a2_private_exempt']
+  COHR 2026-03-02 mcap=$47.6B conf=medium patterns=['private_placement', 'securities_purchase_agreement', 'aggregate_purchase_price', 'megacap_corporate_investor', 'section_4a2_private_exempt']
+  NTNX 2026-02-25 mcap=$10.2B conf=high patterns=['private_placement', 'strategic_keyword', 'megacap_corporate_investor', 'section_4a2_private_exempt']
+
+Dilutive_pipe low (pipe>=2 + 1 strategic marker): 103
+  KRP 2025-01-07 mcap=$1.6B patterns=['private_placement', 'section_4a2_private_exempt']
+  QUBT 2025-01-08 mcap=$1.6B patterns=['placement_agent']
+  INBX 2025-01-13 mcap=$0.9B patterns=['accredited_investors', 'section_4a2_private_exempt']
+  XLO 2025-02-12 mcap=$0.6B patterns=['private_placement', 'section_4a2_private_exempt']
+  SSII 2025-01-24 mcap=$0.9B patterns=['accredited_investors', 'section_4a2_private_exempt']
+  ONDS 2025-01-16 mcap=$4.7B patterns=['securities_purchase_agreement']
+  PLUG 2025-02-10 mcap=$3.1B patterns=['accredited_investors', 'section_4a2_private_exempt']
+  LPTH 2025-02-13 mcap=$0.8B patterns=['private_placement', 'securities_purchase_agreement', 'section_4a2_private_exempt']
+  UPBD 2025-02-05 mcap=$1.0B patterns=['registration_rights', 'section_4a2_private_exempt']
+  VNOM 2025-01-30 mcap=$16.9B patterns=['registration_rights']
