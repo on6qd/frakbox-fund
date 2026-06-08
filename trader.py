@@ -284,7 +284,15 @@ def check_stop_losses():
         elif deadline:
             try:
                 deadline_dt = datetime.fromisoformat(deadline)
-                if now > deadline_dt:
+                # Bugfix 2026-06-08: `now` is naive but stored deadlines are
+                # tz-aware (e.g. "...-04:00"). Comparing naive vs aware raises
+                # TypeError, which was silently swallowed here — so deadline
+                # closes NEVER fired (positions stuck open weeks past deadline).
+                # Normalize `now` to the deadline's tzinfo before comparing.
+                now_cmp = now
+                if deadline_dt.tzinfo is not None:
+                    now_cmp = datetime.now(deadline_dt.tzinfo)
+                if now_cmp > deadline_dt:
                     reason = f"DEADLINE: {symbol} held past deadline ({deadline[:10]}), return {position_return_pct:+.1f}%"
             except (ValueError, TypeError):
                 pass
