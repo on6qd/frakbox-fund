@@ -1176,6 +1176,25 @@ def cmd_cointegration(args):
     from tools.timeseries import get_series
     import causal_tests
 
+    # Structural dead-end guard (enforces cointegration_scan_hit_batch_closure_2026_04_24
+    # and cointegration_common_shock_anchor_rule_2026_04_19). The scanner reads this
+    # output, so surfacing the dead-end status here prevents re-queuing resolved pairs
+    # (BA-RTX, V-MA, TSLA-F, etc.) as scan hits.
+    try:
+        from tools.scan_hit_dead_end_check import is_known_dead_end
+        _dead, _reason = is_known_dead_end(pair=(args.series_a, args.series_b))
+        if _dead:
+            print(json.dumps({
+                "status": "KNOWN_DEAD_END",
+                "known_dead_end": True,
+                "pair": f"{args.series_a}/{args.series_b}",
+                "warning": "DO NOT QUEUE AS SCAN HIT — this pair is a recorded dead end.",
+                "reason": _reason,
+            }, indent=2))
+            return
+    except Exception:
+        pass  # never let the guard block a legitimate test
+
     try:
         series_a = get_series(args.series_a, args.start, args.end)
         series_b = get_series(args.series_b, args.start, args.end)
