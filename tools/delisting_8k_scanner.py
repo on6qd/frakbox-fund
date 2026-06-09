@@ -147,6 +147,58 @@ FORCED_PATTERNS = [
     "timely filing requirement",
 ]
 
+# Periodic-filing-delinquency patterns (added 2026-06-09).
+# An Item 3.01 filed solely because the company is late filing a periodic
+# report (10-K / 10-Q) under Nasdaq Rule 5250(c)(1) or NYSE Rule 802.01E is a
+# STALE, NON-TRADEABLE subtype: the delinquency is already public via the prior
+# NT 12b-25 filing, so the 3.01 carries no new information. DRVN was 2-for-2
+# adverse (short lost money). These match FORCED_PATTERNS ("timely filing
+# requirement", "not in compliance with") so they MUST be detected first and
+# classified as 'periodic_delinquency' (NO-GO), not 'forced'.
+# Strong single tokens — unambiguous filing-delinquency rules:
+PERIODIC_DELINQUENCY_STRONG = [
+    "5250(c)(1)",
+    "5250(c)1",
+    "rule 5250(c)",
+    "802.01e",
+    "12b-25",
+    "12b 25",
+]
+# Reference to a periodic report:
+PERIODIC_REPORT_REFS = [
+    "form 10-k",
+    "form 10-q",
+    "annual report",
+    "quarterly report",
+    "periodic report",
+]
+# Failure-to-file action language (must co-occur with a periodic-report ref):
+DELINQUENCY_ACTION = [
+    "timely file",
+    "timely filing of",
+    "did not file",
+    "failed to file",
+    "failure to file",
+    "has not filed",
+    "have not filed",
+    "not yet filed",
+    "unable to file",
+    "delinquen",
+    "late in filing",
+    "late filing of",
+]
+
+
+def is_periodic_delinquency(snippet: str) -> bool:
+    """True if the Item 3.01 snippet is a late-periodic-report delinquency
+    (Nasdaq 5250(c)(1) / NYSE 802.01E / 12b-25), which is stale and non-tradeable."""
+    for tok in PERIODIC_DELINQUENCY_STRONG:
+        if tok in snippet:
+            return True
+    has_ref = any(r in snippet for r in PERIODIC_REPORT_REFS)
+    has_action = any(a in snippet for a in DELINQUENCY_ACTION)
+    return has_ref and has_action
+
 
 def classify_filing_content(text: str) -> str:
     """
@@ -186,6 +238,17 @@ def classify_filing_content(text: str) -> str:
     for pat in GOING_PRIVATE_PATTERNS:
         if pat in snippet_clean:
             return "going_private"
+
+    # Check periodic-filing delinquency (late 10-K/10-Q) BEFORE voluntary AND
+    # forced (2026-06-09). Its strong tokens (5250(c)(1), 12b-25, 802.01E) are
+    # unambiguous, and the Item 3.01 header boilerplate ("...transfer of
+    # listing") spuriously matches VOLUNTARY_PATTERNS — so a true late-filing
+    # delinquency (DRVN 2026-06-05) was being mislabeled 'voluntary'. These are
+    # stale/non-tradeable (already public via the prior NT 12b-25). Use a wider
+    # window since the rule citation can appear further into the body.
+    snippet_wide = text_lower[idx: idx + 3000]
+    if is_periodic_delinquency(snippet_wide):
+        return "periodic_delinquency"
 
     # Check voluntary transfer/withdrawal (may continue trading on OTC)
     for pat in VOLUNTARY_PATTERNS:
@@ -584,11 +647,21 @@ def main():
         forced = [e for e in events if e.get("filing_type") == "forced"]
         voluntary = [e for e in events if e.get("filing_type") == "voluntary"]
         unknown = [e for e in events if e.get("filing_type") == "unknown"]
+        periodic = [e for e in events if e.get("filing_type") == "periodic_delinquency"]
         print(
-            f"Classification: {len(forced)} forced, {len(voluntary)} voluntary, {len(unknown)} unknown",
+            f"Classification: {len(forced)} forced, {len(voluntary)} voluntary, "
+            f"{len(periodic)} periodic_delinquency (NO-GO/stale), {len(unknown)} unknown",
             file=sys.stderr,
         )
+        if periodic:
+            for e in periodic:
+                print(
+                    f"  NO-GO {e.get('ticker','?')} {e.get('file_date','?')}: "
+                    f"periodic-filing delinquency (stale, already public via NT/12b-25)",
+                    file=sys.stderr,
+                )
         if args.forced_only:
+            # periodic_delinquency is excluded from forced (stale, non-tradeable)
             events = forced
             print(f"Keeping only forced delistings: {len(events)} events", file=sys.stderr)
 
