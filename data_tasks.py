@@ -1226,13 +1226,25 @@ def cmd_threshold(args):
     raw_sig = result.get("p_value") is not None and result.get("p_value") < 0.05
     if raw_sig and not skip_canonical:
         canonical_horizons = sorted(set([1, 3] + horizons))
+        # The canonical retest exists to verify deep-history robustness via a
+        # pooled (2010+) vs recent (2020+) split. It must ALWAYS reach into deep
+        # history regardless of the raw test's start date. If a scanner runs the
+        # raw test on a recent window (e.g. start=2024-01-01), inheriting that
+        # start collapses pooled==recent and defeats the recency-robustness guard
+        # -> recent-regime-only artifacts falsely PASS canonical. So clamp the
+        # canonical start to the earlier of the raw start and the deep default.
+        # See: threshold_canonical_retest_start_date_contamination_bug_2026_06_09.
+        canonical_default_start = "2010-01-01"
+        canonical_start = canonical_default_start
+        if args.start and args.start < canonical_default_start:
+            canonical_start = args.start
         canonical = causal_tests.canonical_retest_threshold(
             trigger_identifier=args.trigger,
             target_symbol=args.target,
             threshold=args.threshold_value,
             direction=args.direction,
             horizons=canonical_horizons,
-            start=args.start or "2010-01-01",
+            start=canonical_start,
             end=args.end,
         )
         # Keep the canonical result inside `result` for storage, and expose a compact
