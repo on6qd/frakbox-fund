@@ -556,6 +556,54 @@ def _check_commodity_sector_leadlag_artifact(factor, target):
     }
 
 
+def _check_exposure_tradeability(factor, target):
+    """Tradeability caveat for contemporaneous factor-EXPOSURE (beta) tests.
+
+    A contemporaneous exposure beta (target ~ factor, same-day) is, by
+    construction, NOT directly tradeable: you cannot observe today's factor
+    close and trade the target at that same close. An exposure hit is only
+    actionable if it can be converted into a predictive (lead-lag) or
+    threshold/event signal that survives OOS validation.
+
+    Rule (factor_exposure_contemporaneous_not_tradeable_2026_06_09): the
+    factor-exposure screen was queuing significant contemporaneous betas as
+    priority-8 "tradeable alpha." For the documented commodity->sector and
+    DGS-rate->rate-sensitive-ETF families, the lead-lag/threshold conversions
+    are already confirmed systematic artifacts (mean abnormal returns <1%,
+    OOS non-significant). For all other pairs the exposure is still only a
+    hedge/risk relationship until a predictive conversion is validated.
+
+    Returns a dict describing the caveat (never None) so the screen always
+    sees the contemporaneous-only flag.
+    """
+    is_commodity = _is_commodity_sector_pair(factor, target)
+    is_rate = _is_dgs_rate_sensitive_pair(factor, target)
+    conversion_dead_end = is_commodity or is_rate
+    if conversion_dead_end:
+        fam = "commodity->sector" if is_commodity else "DGS-rate->rate-sensitive-ETF"
+        reason = (
+            f"Contemporaneous exposure {factor} -> {target.upper()} is real but NOT "
+            f"directly tradeable (same-day beta). Its predictive conversion is a "
+            f"documented systematic dead end ({fam} family): lead-lag/threshold "
+            f"backtests yield mean abnormal returns <1% and fail OOS. DO NOT queue "
+            f"this exposure as a tradeable scan hit."
+        )
+    else:
+        reason = (
+            f"Contemporaneous exposure {factor} -> {target.upper()} is a same-day beta "
+            f"(hedge/risk relationship), NOT a directly tradeable signal. Only queue "
+            f"if a predictive lead-lag OR threshold conversion is validated OOS first."
+        )
+    return {
+        "check": "exposure_contemporaneous_tradeability",
+        "rule": "factor_exposure_contemporaneous_not_tradeable_2026_06_09",
+        "contemporaneous_only": True,
+        "tradeable_conversion_dead_end": conversion_dead_end,
+        "suppressed": conversion_dead_end,
+        "reason": reason,
+    }
+
+
 def _check_dgs_structural_break_artifact(target_rets, factor_rets, target, factor,
                                           break_date, target_f_stat):
     """Auto-run alt-date falsification for DGS -> rate-sensitive ETF structural breaks.
@@ -892,6 +940,19 @@ def cmd_regression(args):
 
     if test_type == "exposure":
         result = causal_tests.test_exposure(target_rets, factor_rets, control_rets, oos_start=args.oos_start)
+        # Contemporaneous exposure betas are not directly tradeable. Tag every
+        # exposure result with a tradeability caveat; hard-suppress documented
+        # commodity->sector and DGS-rate->ETF families whose predictive
+        # conversions are confirmed artifacts.
+        # (factor_exposure_contemporaneous_not_tradeable_2026_06_09)
+        if isinstance(result, dict) and "error" not in result:
+            caveat = _check_exposure_tradeability(args.factor, args.target)
+            result["scan_artifact_check"] = caveat
+            result["scan_artifact_suppressed"] = caveat.get("suppressed", False)
+            result["scan_artifact_reason"] = caveat.get("reason")
+            tag = " | SCAN_ARTIFACT_SUPPRESSED: " if caveat.get("suppressed") \
+                else " | EXPOSURE_CONTEMPORANEOUS_NOT_TRADEABLE: "
+            result["summary"] = (result.get("summary", "") or "") + tag + caveat["reason"]
     elif test_type == "lead_lag":
         max_lags = args.max_lags or 10
         result = causal_tests.test_lead_lag(factor_rets, target_rets, max_lags=max_lags, oos_start=args.oos_start)
