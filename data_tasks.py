@@ -481,6 +481,15 @@ _COMMODITY_SENSITIVE_ETFS = {
     "XLB", "XME", "GDX", "GDXJ", "SIL",  # materials / miners
     "MOO", "DBA",             # agribusiness / agriculture
     "XLP", "XLI",             # consumer staples / industrials (food processing, fertilizer)
+    # Utilities: fuel input (natural gas / oil) makes XLU commodity-sensitive while
+    # also rate-sensitive. Added 2026-06-10 after CL=F -> XLU lag-3 Granger scan hit
+    # (IS p=0.0064) failed the fixed-lag OOS retest: discovered lag-3 dies OOS
+    # (beta=+0.0006, p=0.97) while the "OOS confirmation" was lag-1 lag-hopping; the
+    # tradeable oil-up/down spread is insignificant IS (t=-0.28) and OOS (t=1.38),
+    # mean abnormal returns <0.1%. Same contemporaneous-exposure + vol-clustering
+    # artifact as the rest of the family. See cl_f_xlu_leadlag_canonical_dead_end_2026_06_10
+    # and parent commodity_sector_granger_leadlag_systematic_dead_end_2026_04_20.
+    "XLU",                    # utilities (fuel-cost commodity sensitivity)
     "AAL", "DAL", "UAL", "LUV",  # airlines (crude exposure)
     # Commodity-sensitive broad emerging-market / country index ETFs
     # (added 2026-04-23 after CL=F -> EEM lag-4 Granger canonical retest failed;
