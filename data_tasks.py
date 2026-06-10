@@ -1250,6 +1250,27 @@ def cmd_cointegration(args):
               "start": args.start, "end": args.end, "oos_start": args.oos_start}
 
     summary = _causal_summary(result)
+
+    # OOS-validation queue guard (enforces
+    # cointegration_scan_hit_is_only_oos_fail_do_not_queue_rule_2026_06_10).
+    # Engle-Granger cointegration is IS-significant for many co-moving peer pairs
+    # by construction (shared sector/common shock), but the spread is only
+    # TRADEABLE if it remains stationary out-of-sample. Scan hits that are
+    # IS-significant with oos_significant != True (e.g. BA/LMT OOS ADF p=0.154,
+    # CLF/MT OOS ADF p=0.986) have repeatedly been queued at P8 and resolved as
+    # dead ends, wasting orchestrator sessions. The scanner reads this field:
+    # only queue cointegration hits where queue_recommendation == "QUEUE_OK".
+    if args.oos_start and summary.get("significant"):
+        if summary.get("oos_significant") is True:
+            summary["queue_recommendation"] = "QUEUE_OK"
+        else:
+            summary["queue_recommendation"] = "DO_NOT_QUEUE"
+            summary["queue_guard_reason"] = (
+                "IS-significant but spread NOT stationary out-of-sample "
+                "(oos_significant != True). Not tradeable. Record as "
+                "DEAD_END_COINTEGRATION_OOS_FAIL instead of queuing."
+            )
+
     result_id = _store_result("cointegration", params, result, json.dumps(summary, default=str))
     summary["result_id"] = result_id
     print(json.dumps(summary, indent=2, default=str))
