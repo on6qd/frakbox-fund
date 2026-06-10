@@ -144,6 +144,12 @@ python3 data_tasks.py threshold --trigger "^VIX" --target SPY --threshold-value 
 python3 data_tasks.py calendar --symbol SPY --pattern monthly --pattern-month 1 --oos-start-year 2020
 
 # Regime: rate hiking -> utility stocks
+#   Regime tests are IS-significant by construction (time-varying beta is a textbook
+#   stylized fact). ONLY queue a regime scan hit when oos_significant=True. The summary
+#   now carries queue_recommendation: if it is "DO_NOT_QUEUE" (set whenever the test is
+#   not OOS-validated, with known_dead_end=True), DO NOT queue it — record as
+#   DEAD_END_DUPLICATE_OF_AUDITED_FAMILY. See
+#   regime_scan_hit_is_only_dead_end_batch_and_guard_2026_06_10.
 python3 data_tasks.py regression --target XLU --factor "FRED:FEDFUNDS" --test-type regime
 
 # Network: AAPL shock -> suppliers
