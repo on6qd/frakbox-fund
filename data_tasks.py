@@ -1166,6 +1166,40 @@ def cmd_regression(args):
         return
 
     summary = _causal_summary(result)
+
+    # Regime scan-hit guard (enforces regime_validation_is_gate_rule_2026_04_20,
+    # vix30_threshold_audit_complete_2026_04_20,
+    # spy_vix_regime_scan_hit_duplicate_closure_2026_04_24 at the scan-queue
+    # boundary). Regime tests on macro indicators (VIX, yields) are IS-significant
+    # by construction — time-varying beta is a textbook stylized fact — so raw IS
+    # significance is NOT queue-worthy. The scanner reads this output; surfacing a
+    # DO_NOT_QUEUE recommendation stops it from re-queuing IS-only regime hits as
+    # scan_hits (the recurring 2026-04-24 duplicate-closure bug). Does not change
+    # any validation gate — only the queuing recommendation.
+    if test_type == "regime" and summary.get("status") == "ok":
+        if not summary.get("oos_significant"):
+            summary["queue_recommendation"] = "DO_NOT_QUEUE"
+            summary["known_dead_end"] = True
+            summary["queue_block_reason"] = (
+                "Regime test is IS-significant but NOT OOS-validated. IS-only regime "
+                "significance (time-varying beta) belongs to an audited dead-end "
+                "family (vix30_threshold_audit_complete_2026_04_20). Do not queue as "
+                "a scan hit. Only OOS-validated regime relationships are queue-worthy."
+            )
+        else:
+            # OOS-validated: still consult the dead-end registry by signal key.
+            try:
+                from tools.scan_hit_dead_end_check import is_known_dead_end
+                _key = (f"{args.target}_{args.factor}_regime"
+                        .replace("^", "").replace("FRED:", "").lower())
+                _dead, _reason = is_known_dead_end(signal_key=_key)
+                if _dead:
+                    summary["queue_recommendation"] = "DO_NOT_QUEUE"
+                    summary["known_dead_end"] = True
+                    summary["queue_block_reason"] = _reason
+            except Exception:
+                pass
+
     result_id = _store_result(f"regression_{test_type}", params, result, json.dumps(summary, default=str))
     summary["result_id"] = result_id
     print(json.dumps(summary, indent=2, default=str))
