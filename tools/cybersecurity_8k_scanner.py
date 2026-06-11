@@ -41,6 +41,8 @@ sys.path.insert(0, '/Users/frakbox/Bots/financial_researcher')
 
 import requests
 
+from tools.edgar_efts import efts_get_json, EFTSFetchError
+
 try:
     import yfinance as yf
 except ImportError:
@@ -63,12 +65,12 @@ def search_item_105(start_date: str, end_date: str) -> list[dict]:
 
     all_hits = []
     url = base_url + f"&from=0&size={EFTS_PAGE_SIZE}"
-    resp = requests.get(url, headers=HEADERS, timeout=30)
-    if resp.status_code != 200:
-        print(f"EFTS error: {resp.status_code}", file=sys.stderr)
-        return []
+    try:
+        data = efts_get_json(url, headers=HEADERS, label="cybersec-8k")
+    except EFTSFetchError as e:
+        print(f"EFTS error (data unavailable, NOT a clean scan): {e}", file=sys.stderr)
+        raise
 
-    data = resp.json()
     total = data.get("hits", {}).get("total", {}).get("value", 0)
     hits = data.get("hits", {}).get("hits", [])
     all_hits.extend(hits)
@@ -79,11 +81,12 @@ def search_item_105(start_date: str, end_date: str) -> list[dict]:
     while fetched < max_to_fetch:
         time.sleep(SEC_DELAY)
         url = base_url + f"&from={fetched}&size={EFTS_PAGE_SIZE}"
-        resp = requests.get(url, headers=HEADERS, timeout=30)
-        if resp.status_code != 200:
-            print(f"  Pagination error at offset {fetched}: {resp.status_code}", file=sys.stderr)
+        try:
+            page_data = efts_get_json(url, headers=HEADERS, label="cybersec-8k-page")
+        except EFTSFetchError as e:
+            print(f"  Pagination error at offset {fetched}: {e}", file=sys.stderr)
             break
-        page_hits = resp.json().get("hits", {}).get("hits", [])
+        page_hits = page_data.get("hits", {}).get("hits", [])
         if not page_hits:
             break
         all_hits.extend(page_hits)

@@ -35,6 +35,8 @@ sys.path.insert(0, '/Users/frakbox/Bots/financial_researcher')
 
 import requests
 
+from tools.edgar_efts import efts_get_json, EFTSFetchError
+
 try:
     import yfinance as yf
 except ImportError:
@@ -75,12 +77,16 @@ def search_13d_filings(start_date: str, end_date: str) -> list[dict]:
             f"&forms=SCHEDULE+13D"
             f"&dateRange=custom&startdt={start_date}&enddt={end_date}"
         )
-        resp = requests.get(url, headers=HEADERS, timeout=30)
-        if resp.status_code != 200:
-            print(f"  EFTS error for {info['name']}: {resp.status_code}", file=sys.stderr)
+        try:
+            data = efts_get_json(url, headers=HEADERS, label=f"13d-{info['name'][:12]}")
+        except EFTSFetchError as e:
+            # For tradeable activists (Starboard) a silent skip risks a missed
+            # live trigger — surface it loudly so the scan is flagged unreliable.
+            print(f"  EFTS error for {info['name']} (data unavailable): {e}", file=sys.stderr)
+            if info.get("tradeable"):
+                raise
             continue
 
-        data = resp.json()
         hits = data.get("hits", {}).get("hits", [])
 
         for h in hits:
