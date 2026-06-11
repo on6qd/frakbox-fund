@@ -628,6 +628,45 @@ def check_edgar_8k(days_back: int = 3) -> tuple:
 
 
 # ---------------------------------------------------------------------------
+# Pre-announce run-up guardrail (Q2 2026 MRVL post-mortem)
+# ---------------------------------------------------------------------------
+
+# A name that has already rallied hard INTO the announcement has front-run the
+# index-inclusion premium; the post-announce drift reverses to a fade. MRVL
+# (+27% abnormal pre-announce, Q2 2026) was the canonical casualty. SKIP any
+# addition whose 5d pre-announce abnormal (vs SPY) run-up exceeds this threshold.
+RUNUP_SKIP_THRESHOLD_PCT = 20.0
+
+
+def pre_announce_abnormal_runup(symbol: str, announcement_date: str, lookback: int = 5):
+    """5d abnormal run-up (symbol minus SPY) from close[D-lookback] to close[D],
+    where D is the after-hours announcement date. Returns (pct, status)."""
+    try:
+        import pandas as pd
+        from tools.yfinance_utils import get_close_prices
+        d = pd.Timestamp(announcement_date)
+        start = (d - pd.Timedelta(days=lookback + 25)).strftime("%Y-%m-%d")
+        end = (d + pd.Timedelta(days=3)).strftime("%Y-%m-%d")
+        sym = get_close_prices(symbol, start, end)
+        spy = get_close_prices("SPY", start, end)
+        if sym is None or spy is None:
+            return None, "fetch_none"
+        if hasattr(sym, "columns"):
+            sym = sym.iloc[:, 0]
+        if hasattr(spy, "columns"):
+            spy = spy.iloc[:, 0]
+        sym = sym[sym.index <= d]
+        spy = spy[spy.index <= d]
+        if len(sym) < lookback + 1 or len(spy) < lookback + 1:
+            return None, "insufficient"
+        sym_ret = (float(sym.iloc[-1]) / float(sym.iloc[-(lookback + 1)]) - 1) * 100
+        spy_ret = (float(spy.iloc[-1]) / float(spy.iloc[-(lookback + 1)]) - 1) * 100
+        return round(sym_ret - spy_ret, 2), "ok"
+    except Exception as e:
+        return None, f"err:{e}"
+
+
+# ---------------------------------------------------------------------------
 # Hypothesis updater
 # ---------------------------------------------------------------------------
 
@@ -666,17 +705,37 @@ def update_hypothesis(ticker: str, announcement_date: str, effective_date: str,
         print(f"  WARNING: expected_symbol is currently '{current_symbol}' (not TBD). "
               f"Will overwrite with '{ticker}'.")
 
+    # Run-up guardrail: a name that already front-ran the inclusion premium fades.
+    runup, runup_status = pre_announce_abnormal_runup(ticker, announcement_date)
+    if runup is not None:
+        print(f"  Pre-announce 5d abnormal run-up: {runup:+.1f}% (skip threshold "
+              f">{RUNUP_SKIP_THRESHOLD_PCT:.0f}%)")
+        if runup > RUNUP_SKIP_THRESHOLD_PCT:
+            print(f"  SKIP: {ticker} run-up {runup:+.1f}% exceeds {RUNUP_SKIP_THRESHOLD_PCT:.0f}% "
+                  f"-> inclusion premium already priced in (Q2 2026 MRVL pattern). No trigger set.")
+            return False
+    else:
+        print(f"  WARNING: could not compute pre-announce run-up ({runup_status}); "
+              f"proceeding without guardrail. Verify {ticker} manually for >20% run-up.")
+
     print(f"  Updating hypothesis {target['id']}:")
     print(f"    expected_symbol: {current_symbol} -> {ticker}")
     print(f"    trigger: next_market_open")
     print(f"    trigger_position_size: 5000")
-    print(f"    trigger_stop_loss_pct: 10")
+    print(f"    trigger_stop_loss_pct: 15")
 
     if not dry_run:
         target["expected_symbol"] = ticker
         target["trigger"] = "next_market_open"
         target["trigger_position_size"] = 5000
-        target["trigger_stop_loss_pct"] = 10
+        # CORRECTED 2026-06-12 (Q2 MRVL/FLEX post-mortem): the validated edge is a
+        # stopless 14d CLOSE-to-close hold. check_stop_losses() runs every 2 min on
+        # Alpaca's intraday current_price, so a tight 10% stop fires on intraday
+        # drawdown even when the close-to-close signal is intact — that whipsaw booked
+        # ~-9.5% on both MRVL and FLEX. Use a WIDE 15% catastrophe-only stop (cannot be
+        # None: trade_loop enforces MIN_STOP_LOSS_PCT). See knowledge entry
+        # sp500_index_addition_stop_whipsaw_fix_2026_06_12.
+        target["trigger_stop_loss_pct"] = 15
         target["_sp500_addition_meta"] = {
             "announced": announcement_date,
             "effective": effective_date,

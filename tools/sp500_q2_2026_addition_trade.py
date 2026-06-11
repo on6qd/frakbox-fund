@@ -99,7 +99,11 @@ for a in adds:
         hid,
         trigger="next_market_open",
         trigger_position_size=5000,
-        trigger_stop_loss_pct=10,
+        # CORRECTED 2026-06-12: wide 15% catastrophe-only stop, NOT 10%. The 10% stop is
+        # evaluated intraday (every 2 min on Alpaca current_price) and whipsawed both
+        # MRVL & FLEX to ~-9.5% booked losses while the validated close-to-close 14d
+        # signal stayed intact. See knowledge sp500_index_addition_stop_whipsaw_fix_2026_06_12.
+        trigger_stop_loss_pct=15,
         trigger_take_profit_pct=None,
     )
     print(f"created+triggered {a['sym']} -> {hid}")
