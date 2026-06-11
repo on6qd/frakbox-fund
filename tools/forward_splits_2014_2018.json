@@ -1,0 +1,177 @@
+[
+  {
+    "symbol": "AAPL",
+    "split_payable_date": "2014-06-09",
+    "ratio": 7.0
+  },
+  {
+    "symbol": "HPQ",
+    "split_payable_date": "2015-11-02",
+    "ratio": 2.202
+  },
+  {
+    "symbol": "GOOG",
+    "split_payable_date": "2014-03-27",
+    "ratio": 2.002
+  },
+  {
+    "symbol": "NFLX",
+    "split_payable_date": "2015-07-15",
+    "ratio": 7.0
+  },
+  {
+    "symbol": "CMCSA",
+    "split_payable_date": "2017-02-21",
+    "ratio": 2.0
+  },
+  {
+    "symbol": "NKE",
+    "split_payable_date": "2015-12-24",
+    "ratio": 2.0
+  },
+  {
+    "symbol": "SBUX",
+    "split_payable_date": "2015-04-09",
+    "ratio": 2.0
+  },
+  {
+    "symbol": "TJX",
+    "split_payable_date": "2018-11-07",
+    "ratio": 2.0
+  },
+  {
+    "symbol": "EBAY",
+    "split_payable_date": "2015-07-20",
+    "ratio": 2.376
+  },
+  {
+    "symbol": "KR",
+    "split_payable_date": "2015-07-14",
+    "ratio": 2.0
+  },
+  {
+    "symbol": "ROST",
+    "split_payable_date": "2015-06-12",
+    "ratio": 2.0
+  },
+  {
+    "symbol": "CPRT",
+    "split_payable_date": "2017-04-11",
+    "ratio": 2.0
+  },
+  {
+    "symbol": "MNST",
+    "split_payable_date": "2016-11-10",
+    "ratio": 3.0
+  },
+  {
+    "symbol": "HRL",
+    "split_payable_date": "2016-02-10",
+    "ratio": 2.0
+  },
+  {
+    "symbol": "CHD",
+    "split_payable_date": "2016-09-02",
+    "ratio": 2.0
+  },
+  {
+    "symbol": "V",
+    "split_payable_date": "2015-03-19",
+    "ratio": 4.0
+  },
+  {
+    "symbol": "MA",
+    "split_payable_date": "2014-01-22",
+    "ratio": 10.0
+  },
+  {
+    "symbol": "GPN",
+    "split_payable_date": "2015-11-03",
+    "ratio": 2.0
+  },
+  {
+    "symbol": "AFL",
+    "split_payable_date": "2018-03-19",
+    "ratio": 2.0
+  },
+  {
+    "symbol": "ICE",
+    "split_payable_date": "2016-11-04",
+    "ratio": 5.0
+  },
+  {
+    "symbol": "ISRG",
+    "split_payable_date": "2017-10-06",
+    "ratio": 3.0
+  },
+  {
+    "symbol": "EW",
+    "split_payable_date": "2015-12-14",
+    "ratio": 2.0
+  },
+  {
+    "symbol": "IDXX",
+    "split_payable_date": "2015-06-16",
+    "ratio": 2.0
+  },
+  {
+    "symbol": "CNC",
+    "split_payable_date": "2015-02-20",
+    "ratio": 2.0
+  },
+  {
+    "symbol": "UNP",
+    "split_payable_date": "2014-06-09",
+    "ratio": 2.0
+  },
+  {
+    "symbol": "EOG",
+    "split_payable_date": "2014-04-01",
+    "ratio": 2.0
+  },
+  {
+    "symbol": "MPC",
+    "split_payable_date": "2015-06-11",
+    "ratio": 2.0
+  },
+  {
+    "symbol": "ET",
+    "split_payable_date": "2014-01-27",
+    "ratio": 2.0
+  },
+  {
+    "symbol": "ET",
+    "split_payable_date": "2015-07-27",
+    "ratio": 2.0
+  },
+  {
+    "symbol": "EPD",
+    "split_payable_date": "2014-08-22",
+    "ratio": 2.0
+  },
+  {
+    "symbol": "PPG",
+    "split_payable_date": "2015-06-15",
+    "ratio": 2.0
+  },
+  {
+    "symbol": "ASH",
+    "split_payable_date": "2017-05-15",
+    "ratio": 2.044
+  },
+  {
+    "symbol": "CF",
+    "split_payable_date": "2015-06-18",
+    "ratio": 5.0
+  },
+  {
+    "symbol": "LNT",
+    "split_payable_date": "2016-05-20",
+    "ratio": 2.0
+  },
+  {
+    "symbol": "NI",
+    "split_payable_date": "2015-07-02",
+    "ratio": 2.545
+  }
+]
