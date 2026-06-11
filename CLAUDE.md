@@ -127,6 +127,16 @@ python3 data_tasks.py regression --target AAL --factor CL=F --controls SPY --oos
 # Lead-lag: does copper lead industrial stocks?
 python3 data_tasks.py regression --target XLI --factor HG=F --test-type lead_lag --max-lags 10
 
+# Structural break: macro factor -> sector beta reset at a date
+#   A structural break detects that a CONTEMPORANEOUS beta changed magnitude — it is a
+#   risk-model fact, NOT a forward signal (the beta is priced in real time). The engine now
+#   tags every structural_break result contemporaneous-only and HARD-SUPPRESSES crisis-date
+#   breaks (2020-03-15, 2022-03-16, etc.) where every macro->sector beta breaks by construction.
+#   NEVER queue a structural-break scan hit as tradeable. If scan_artifact_suppressed=True,
+#   record DEAD_END. Even non-crisis breaks need a validated predictive (lead-lag/threshold)
+#   conversion before queuing. See structural_break_contemporaneous_not_tradeable_2026_06_11.
+python3 data_tasks.py regression --target XLE --factor CL=F --test-type structural_break --break-date 2022-03-16
+
 # Cointegration: pairs trade candidate?
 python3 data_tasks.py cointegration --series-a GLD --series-b GDX --oos-start 2024-01-01
 

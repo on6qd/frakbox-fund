@@ -613,6 +613,50 @@ def _check_exposure_tradeability(factor, target):
     }
 
 
+def _check_structural_break_tradeability(factor, target, break_date):
+    """Tradeability caveat for ANY contemporaneous macro->sector structural break.
+
+    A structural break in a target ~ factor regression detects that the
+    CONTEMPORANEOUS beta changed magnitude at a date. That beta is, by
+    construction, priced in real time (you cannot observe today's factor close
+    and trade the target at the same close), so a break is a risk-model fact,
+    NOT a forward trading signal. Empirically (rates_staples_structural_break_
+    not_tradeable_2026_06_11): the cleanest break-pair that even passed a Granger
+    lead-lag xcorr screen (FRED:DGS10 -> XLP) had ~0 predictive correlation
+    (-0.034..+0.021) when converted to past-yield-change -> forward abnormal XLP
+    return, with slopes flipping sign IS vs OOS. Structural breaks also cluster
+    almost entirely on famous crisis dates (COVID 2020-03-15, Fed/Russia
+    2022-03-16) where every macro->sector beta breaks by construction.
+
+    Returns a dict (never None) so every structural-break result carries the
+    contemporaneous-only flag. Hard-suppresses crisis-date breaks; for other
+    dates flags as contemporaneous-only pending a validated predictive
+    conversion.
+    """
+    crisis_dates = {"2020-03-15", "2020-03-16", "2020-03-23",
+                    "2022-03-16", "2022-02-24", "2025-04-02"}
+    on_crisis_date = str(break_date) in crisis_dates
+    reason = (
+        f"Structural break {factor} -> {target.upper()} at {break_date} is a change in a "
+        f"CONTEMPORANEOUS beta (priced in real time), NOT a forward signal. Predictive "
+        f"conversions of macro->sector break pairs are documented dead ends "
+        f"(rates_staples_structural_break_not_tradeable_2026_06_11): ~0 OOS predictive "
+        f"correlation. "
+        + ("Break sits on a famous crisis date where every macro->sector beta breaks by "
+           "construction. DO NOT queue as a tradeable scan hit."
+           if on_crisis_date else
+           "Only queue if a predictive lead-lag OR threshold conversion is validated OOS first.")
+    )
+    return {
+        "check": "structural_break_contemporaneous_tradeability",
+        "rule": "structural_break_contemporaneous_not_tradeable_2026_06_11",
+        "contemporaneous_only": True,
+        "on_crisis_date": on_crisis_date,
+        "suppressed": on_crisis_date,
+        "reason": reason,
+    }
+
+
 def _check_dgs_structural_break_artifact(target_rets, factor_rets, target, factor,
                                           break_date, target_f_stat):
     """Auto-run alt-date falsification for DGS -> rate-sensitive ETF structural breaks.
@@ -1008,6 +1052,13 @@ def cmd_regression(args):
                     target_rets, factor_rets, args.target, args.factor,
                     args.break_date, target_f,
                 )
+            if artifact is None:
+                # Universal fallback: ANY contemporaneous macro->sector structural
+                # break is a risk-model fact, not a forward signal. Crisis-date
+                # breaks are hard-suppressed.
+                # (structural_break_contemporaneous_not_tradeable_2026_06_11)
+                artifact = _check_structural_break_tradeability(
+                    args.factor, args.target, args.break_date)
             if artifact is not None:
                 result["scan_artifact_check"] = artifact
                 result["scan_artifact_suppressed"] = artifact.get("suppressed", False)
