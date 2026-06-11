@@ -1161,6 +1161,58 @@ def cmd_regression(args):
                 coverage_note += " | OOS sign-preserved AND coverage ok -> VALIDATED"
             elif is_spread is not None and oos_spread is not None:
                 coverage_note += " | OOS sign-flipped"
+
+            # TRADEABLE RETEST (lookahead_regime_lag_fix_2026_06_11):
+            # The base regime test classifies each day by that SAME-DAY (contemporaneous)
+            # factor level. For VIX/vol indicators, VIX spikes ON down days, so high-VIX
+            # days ARE down days by construction -> a mechanical, NON-TRADEABLE artifact
+            # that OOS sign-preservation does NOT catch (the contemporaneous correlation
+            # is present in every period, so it "validates" automatically). To be
+            # tradeable, today's position must be set from a regime KNOWN at decision time
+            # -> classify by the 1-day-LAGGED factor level. Re-run on lagged labels; the
+            # effect must survive. Discovered via COIN/^VIX scan hit (engine p=0.0008 but
+            # lagged p=0.31, high-VIX flips positive). Does NOT change any validation gate;
+            # only adds a tradeability flag the scan-hit guard consults.
+            try:
+                lag_df = aligned_full.copy()
+                lag_df["factor_level"] = lag_df["factor_level"].shift(1)
+                lag_df = lag_df.dropna()
+                lq33, lq66 = lag_df["factor_level"].quantile([1 / 3, 2 / 3]).values
+                lag_df["regime"] = lag_df["factor_level"].apply(
+                    lambda x: "low" if x <= lq33 else ("mid" if x <= lq66 else "high")
+                )
+                lag_res = causal_tests.test_regime(lag_df["returns"], lag_df["regime"])
+                lag_rs = lag_res.get("details", {}).get("regime_stats", {})
+                lag_spread = None
+                if "high" in lag_rs and "low" in lag_rs:
+                    lag_spread = lag_rs["high"]["mean"] - lag_rs["low"]["mean"]
+                lag_sig = bool(lag_res.get("significant"))
+                lag_meaningful = lag_spread is not None and abs(lag_spread) >= 0.05
+                sign_holds = (
+                    is_spread is not None and lag_spread is not None
+                    and np.sign(is_spread) == np.sign(lag_spread)
+                )
+                tradeable = bool(lag_sig and lag_meaningful and sign_holds)
+                result["tradeable_retest"] = {
+                    "lagged_p_value": lag_res.get("p_value"),
+                    "lagged_high_low_spread": float(lag_spread) if lag_spread is not None else None,
+                    "contemporaneous_high_low_spread": float(is_spread) if is_spread is not None else None,
+                    "lagged_significant": lag_sig,
+                    "lagged_meaningful": bool(lag_meaningful),
+                    "sign_holds_vs_contemporaneous": bool(sign_holds),
+                    "tradeable": tradeable,
+                }
+                if not tradeable:
+                    coverage_note += (
+                        f" | TRADEABLE RETEST FAILED (lagged p={lag_res.get('p_value'):.3g}, "
+                        f"lagged spread={lag_spread if lag_spread is None else round(lag_spread,3)}): "
+                        f"contemporaneous regime is look-ahead, effect does not survive 1-day lag."
+                    )
+                else:
+                    coverage_note += " | TRADEABLE RETEST PASSED (survives 1-day lag)"
+            except Exception as _e:
+                result["tradeable_retest"] = {"error": str(_e), "tradeable": None}
+
             result["summary"] = (result.get("summary", "") or "") + coverage_note
     elif test_type == "network":
         spokes = args.controls.split(",") if args.controls else []
@@ -1194,6 +1246,22 @@ def cmd_regression(args):
                 "significance (time-varying beta) belongs to an audited dead-end "
                 "family (vix30_threshold_audit_complete_2026_04_20). Do not queue as "
                 "a scan hit. Only OOS-validated regime relationships are queue-worthy."
+            )
+        elif result.get("tradeable_retest", {}).get("tradeable") is False:
+            # OOS-"validated" but FAILS the 1-day-lagged tradeable retest -> the
+            # contemporaneous regime classification is look-ahead (e.g. VIX spikes ON
+            # down days). OOS sign-preservation cannot catch this. Do not queue.
+            # (lookahead_regime_lag_fix_2026_06_11)
+            tr = result["tradeable_retest"]
+            summary["queue_recommendation"] = "DO_NOT_QUEUE"
+            summary["known_dead_end"] = True
+            summary["queue_block_reason"] = (
+                "Regime effect is OOS-validated by sign-preservation but FAILS the "
+                f"1-day-lagged tradeable retest (lagged p={tr.get('lagged_p_value')}, "
+                f"lagged spread={tr.get('lagged_high_low_spread')}). The contemporaneous "
+                "factor classification is look-ahead (factor and same-day return are "
+                "mechanically correlated); the effect does not survive when the regime is "
+                "known at decision time. NOT TRADEABLE. See lookahead_regime_lag_fix_2026_06_11."
             )
         else:
             # OOS-validated: still consult the dead-end registry by signal key.
