@@ -1,0 +1,12 @@
+  'shareholder rights plan': 5585 filings 2015-01-01..2024-12-31
+  EFTS retry [pill-pg] 1/4 after HTTP 500 (sleep 1s)
+  EFTS retry [pill-pg] 2/4 after HTTP 500 (sleep 2s)
+  'stockholder rights plan': 4609 filings 2015-01-01..2024-12-31
+  EFTS retry [pill-pg] 1/4 after HTTP 500 (sleep 1s)
+  EFTS retry [pill-pg] 2/4 after HTTP 500 (sleep 2s)
+  EFTS retry [pill-pg] 1/4 after HTTP 500 (sleep 1s)
+  EFTS retry [pill-pg] 1/4 after HTTP 500 (sleep 1s)
+  EFTS retry [pill-pg] 1/4 after HTTP 500 (sleep 1s)
+  EFTS retry [pill-pg] 2/4 after HTTP 500 (sleep 2s)
+  'tax benefit preservation plan': 231 filings 2015-01-01..2024-12-31
+  unique tickers (first filing): 1412
