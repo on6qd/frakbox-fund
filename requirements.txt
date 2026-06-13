@@ -1,8 +1,7 @@
-alpaca-trade-api==3.2.0
 beautifulsoup4==4.14.3
 numpy==2.4.3
 pandas==3.0.1
-PyYAML==6.0.3
+PyYAML==6.0.1
 requests==2.32.5
 scipy==1.17.1
 urllib3==1.26.19
@@ -10,3 +9,10 @@ xlrd>=2.0.1
 yfinance==1.2.0
 statsmodels>=0.14.0
 libsql-experimental
+# alpaca-trade-api 3.2.0 pins websockets<11, which conflicts with yfinance==1.2.0
+# (needs websockets>=13). Only the REST client (tradeapi.REST) is used by trader.py,
+# so alpaca is installed separately with --no-deps in setup_env.sh. Its REST-only
+# runtime deps are listed below so the research stack alone stays import-clean.
+msgpack>=1.0.0
+deprecation>=2.1.0
+websocket-client>=1.0.0
