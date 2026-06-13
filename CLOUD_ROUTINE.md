@@ -14,11 +14,10 @@ Turso automatically (db.py writes forward to the primary); git is only for code.
 
 ## Prerequisites (do these first)
 
-1. **Push current code to GitHub.** The routine clones the remote, so commits
-   `a280f0f` + `66de98b` (and this file) must be pushed. Current remote is
-   `git@github.com:on6qd/frakbox.git` — see #19 if you rename it.
+1. **Code pushed to GitHub** (done #19) — repo renamed to `on6qd/frakbox-fund`,
+   all commits pushed to `main`.
 2. **Turso is live** (done — `frakbox-fund`, seeded + verified).
-3. Decide the **model** and **scan cadence** — see Notes.
+3. **Model / cadence decided** (done — two routines, see below).
 
 ---
 
@@ -32,7 +31,7 @@ in schedule, model, and prompt.
 
 | Field | Value |
 |---|---|
-| **Repo** | `on6qd/frakbox` (or the renamed repo from #19) |
+| **Repo** | `on6qd/frakbox-fund` |
 | **Branch** | `main` |
 | **Schedule** | every 2 hours |
 | **Model** | Opus (deep 6-step investigations) |
@@ -42,7 +41,7 @@ in schedule, model, and prompt.
 
 | Field | Value |
 |---|---|
-| **Repo** | `on6qd/frakbox` (or the renamed repo from #19) |
+| **Repo** | `on6qd/frakbox-fund` |
 | **Branch** | `main` |
 | **Schedule** | once a day |
 | **Model** | Haiku (high-throughput, cheap) |
