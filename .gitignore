@@ -23,3 +23,8 @@ canonical_retest*.log
 canonical_retest*.txt
 tools/item_302_raw_events.json
 tools/item_302_canonical_retest_events.json
+
+# FINRA settled short-interest cache + backtest panels (local, regenerable)
+data/finra_si_cache/
+data/si_dtc_panel.parquet
+data/si_prices_cache.parquet
