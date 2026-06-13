@@ -14,9 +14,10 @@ Secondary: repeat for XLK (tech/cyclical, biggest claimed sign flip per scan) an
 (defensive, claimed to retain negative exposure — should show low F at 2024).
 """
 import sys
+import os
 import numpy as np
 
-sys.path.insert(0, "/Users/frakbox/Bots/financial_researcher")
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from tools.timeseries import get_aligned_returns
 
 

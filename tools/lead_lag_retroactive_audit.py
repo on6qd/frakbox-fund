@@ -20,7 +20,6 @@ Safe to re-run — does not mutate the database.
 """
 import argparse
 import json
-import sqlite3
 import sys
 from pathlib import Path
 
@@ -31,6 +30,9 @@ BORDERLINE_RATIO = 0.40      # best_lag_xcorr / lag0_xcorr — below this = susp
 ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = ROOT / "research.db"
 
+sys.path.insert(0, str(ROOT))
+import db
+
 # Known structural breaks. When both (factor, target) are rate-sensitive and the
 # IS window starts before the break, flag as REGIME_SPANNING. See
 # rate_sensitive_sectors_2022_structural_break in known_effects.
@@ -40,18 +42,16 @@ RATE_FACTORS = {"FRED:DGS10", "FRED:DGS2", "FRED:FEDFUNDS"}
 
 
 def audit() -> list[dict]:
-    conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
-    cur.execute(
+    rows = db._q(
         "SELECT id, timestamp, parameters, result "
         "FROM task_results WHERE task_type='regression_lead_lag' "
         "ORDER BY timestamp"
     )
-    rows = cur.fetchall()
-    conn.close()
 
     audit = []
-    for id_, ts, params_json, result_json in rows:
+    for r in rows:
+        id_, ts = r["id"], r["timestamp"]
+        params_json, result_json = r["parameters"], r["result"]
         try:
             params = json.loads(params_json or "{}")
             result = json.loads(result_json or "{}")

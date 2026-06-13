@@ -8,7 +8,8 @@ the active SPY-long hypothesis b63a0168). Earliest next eligible trigger:
 ~2026-04-26 (30 days after last event).
 """
 import sys
-sys.path.insert(0, '/Users/frakbox/Bots/financial_researcher')
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import json
 import research
 import db

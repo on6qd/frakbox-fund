@@ -13,29 +13,28 @@ Usage:
 import os
 import sys
 import json
-import sqlite3
 from datetime import datetime, timedelta
 from collections import defaultdict
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import db
+
 
 def get_calendar(days=14):
     """Build a day-by-day calendar of upcoming events and tasks."""
-    conn = sqlite3.connect('research.db')
-    conn.row_factory = sqlite3.Row
     today = datetime.now().date()
     end = today + timedelta(days=days)
 
     calendar = defaultdict(list)
 
     # 1. Event watchlist
-    rows = conn.execute(
+    rows = db._q(
         "SELECT symbol, expected_date, event FROM event_watchlist "
         "WHERE expected_date BETWEEN ? AND ? AND status='watching' "
         "ORDER BY expected_date",
         (today.isoformat(), end.isoformat())
-    ).fetchall()
+    )
     for r in rows:
         calendar[r['expected_date']].append({
             'type': 'WATCHLIST',
@@ -44,10 +43,10 @@ def get_calendar(days=14):
         })
 
     # 2. Active positions with deadlines
-    rows = conn.execute(
+    rows = db._q(
         "SELECT id, event_type, expected_symbol, extra FROM hypotheses "
         "WHERE status='active'"
-    ).fetchall()
+    )
     for r in rows:
         extra = json.loads(r['extra']) if r['extra'] else {}
         trade = extra.get('trade', {})
@@ -62,10 +61,10 @@ def get_calendar(days=14):
                 })
 
     # 3. Pending hypotheses with triggers
-    rows = conn.execute(
+    rows = db._q(
         "SELECT id, event_type, expected_symbol, extra FROM hypotheses "
         "WHERE status='pending'"
-    ).fetchall()
+    )
     for r in rows:
         extra = json.loads(r['extra']) if r['extra'] else {}
         trigger = extra.get('trigger', '')
@@ -78,7 +77,6 @@ def get_calendar(days=14):
                     'detail': f"Trigger: {r['event_type']} ({r['id'][:8]})"
                 })
 
-    conn.close()
     return calendar
 
 

@@ -9,10 +9,11 @@ Success criterion (locked BEFORE running):
   with two-sided p < 0.10 (relaxed from 0.05 due to smaller n).
 """
 import sys
+import os
 import numpy as np
 import pandas as pd
 from scipy import stats
-sys.path.insert(0, '/Users/frakbox/Bots/financial_researcher')
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from tools.yfinance_utils import safe_download
 
 # Event dates from the canonical retest (first-close cluster-buffered, 30-day)

@@ -75,11 +75,7 @@ if __name__ == '__main__':
     else:
         print(__doc__)
         print("\nCurrent status:")
-        import sqlite3
-        conn = sqlite3.connect('research.db')
-        conn.row_factory = sqlite3.Row
         for t in SEMICONDUCTOR_SHORTS + APR7_TRADES:
-            r = conn.execute('SELECT expected_symbol, trigger FROM hypotheses WHERE id LIKE ?', (t['id']+'%',)).fetchone()
+            r = db._q1('SELECT expected_symbol, trigger FROM hypotheses WHERE id LIKE ?', (t['id']+'%',))
             if r:
                 print(f"  {r['expected_symbol']}: trigger={r['trigger']}")
-        conn.close()

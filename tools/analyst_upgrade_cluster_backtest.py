@@ -22,7 +22,8 @@ Design choices:
 Note: Uses yfinance upgrades_downgrades which goes back to ~2012
 """
 import sys
-sys.path.insert(0, '/Users/frakbox/Bots/financial_researcher')
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import yfinance as yf
 import pandas as pd

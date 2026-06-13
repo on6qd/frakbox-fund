@@ -6,14 +6,15 @@ Computes mean abnormal return, direction %, and p-value for VIX>25 vs VIX<25.
 
 import json
 import sys
+import os
 from datetime import datetime, timedelta
 import numpy as np
 from scipy import stats
 
-sys.path.insert(0, '/Users/frakbox/Bots/financial_researcher')
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from tools.yfinance_utils import safe_download
 
-RESULTS_PATH = '/Users/frakbox/Bots/financial_researcher/tools/sp500_removal_backtest_results.json'
+RESULTS_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'tools/sp500_removal_backtest_results.json')
 VIX_THRESHOLD = 25
 HORIZONS = [1, 3, 5, 10, 20]
 

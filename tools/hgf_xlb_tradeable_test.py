@@ -13,11 +13,12 @@ Design:
 - Thresholds: 0.5%, 1.0%, 1.5%, 2.0%. Horizons: 1d, 3d, 5d (scan-claimed lag), 10d.
 """
 import sys
+import os
 import numpy as np
 import pandas as pd
 from scipy import stats
 
-sys.path.insert(0, "/Users/frakbox/Bots/financial_researcher")
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from tools.timeseries import get_aligned_returns
 
 

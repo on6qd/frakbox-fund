@@ -23,10 +23,11 @@ import argparse
 import json
 import re
 import sys
+import os
 import time
 from datetime import datetime, timedelta
 
-sys.path.insert(0, '/Users/frakbox/Bots/financial_researcher')
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import requests
 

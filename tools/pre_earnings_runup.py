@@ -21,6 +21,7 @@ Returns structure designed for use with measure_event_impact().
 """
 
 import sys
+import os
 import warnings
 from datetime import datetime, timedelta
 
@@ -30,7 +31,7 @@ import yfinance as yf
 
 warnings.filterwarnings("ignore")
 
-sys.path.insert(0, "/Users/frakbox/Bots/financial_researcher")
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # S&P 500 large-cap universe (50 stocks for sufficient power, >$50B market cap typical)
 UNIVERSE = [

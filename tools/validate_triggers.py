@@ -10,7 +10,6 @@ Usage:
     python3 tools/validate_triggers.py
 """
 import sys
-import sqlite3
 from datetime import datetime
 from pathlib import Path
 
@@ -28,11 +27,7 @@ REQUIRED_FIELDS = [
 
 def validate_all_triggers():
     db.init_db()
-    conn = sqlite3.connect('research.db')
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-
-    cursor.execute("""
+    rows = db._q("""
         SELECT id, status, event_type, expected_symbol, expected_direction,
                trigger, trigger_position_size, trigger_stop_loss_pct,
                trigger_take_profit_pct
@@ -40,8 +35,6 @@ def validate_all_triggers():
         WHERE trigger IS NOT NULL AND status = 'pending'
         ORDER BY trigger ASC
     """)
-    rows = cursor.fetchall()
-    conn.close()
 
     now = datetime.now()
     issues = []

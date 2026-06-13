@@ -18,14 +18,14 @@ import os
 import pickle
 from pathlib import Path
 
-sys.path.insert(0, '/Users/frakbox/Bots/financial_researcher')
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import requests
 import yfinance as yf
 import pandas as pd
 
 HEADERS = {"User-Agent": "financial-researcher research@example.com"}
-DATA_DIR = Path('/Users/frakbox/Bots/financial_researcher/data')
+DATA_DIR = Path(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data'))
 
 # ── Step 1: Scan all years ──────────────────────────────────────────────────
 from tools.seo_bought_deal_scanner import find_bought_deals, resolve_ticker

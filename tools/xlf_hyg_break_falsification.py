@@ -9,10 +9,11 @@ Alt-date falsification: if F-stat at target break date is NOT >=3x max F at alt 
 (2020-06-15, 2024-01-15), the break is a secular-drift artifact.
 """
 import sys
+import os
 import numpy as np
 from scipy import stats
 
-sys.path.insert(0, "/Users/frakbox/Bots/financial_researcher")
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from tools.timeseries import get_aligned_returns
 
 

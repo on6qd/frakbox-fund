@@ -4,7 +4,8 @@ Calculates 20-day returns from open after each event date, net of SPY.
 """
 
 import sys
-sys.path.insert(0, '/Users/frakbox/Bots/financial_researcher')
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tools.yfinance_utils import safe_download
 import pandas as pd

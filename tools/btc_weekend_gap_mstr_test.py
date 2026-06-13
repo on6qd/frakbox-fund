@@ -13,7 +13,8 @@ Approach:
 - Slope > 0 and significant means BTC weekend move predicts intraday MSTR drift
 """
 import sys
-sys.path.insert(0, '/Users/frakbox/Bots/financial_researcher')
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import yfinance as yf
 import pandas as pd

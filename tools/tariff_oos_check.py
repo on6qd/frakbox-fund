@@ -8,7 +8,8 @@ Usage:
     python3 tools/tariff_oos_check.py [--entry-date 2025-04-03]
 """
 import sys
-sys.path.insert(0, '/Users/frakbox/Bots/financial_researcher')
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import argparse
 import pandas as pd

@@ -3,11 +3,12 @@
 Uses EDGAR EFTS to count events in the past 365 days that would have triggered each scanner."""
 import json
 import sys
+import os
 import time
 from datetime import datetime, timedelta
 import requests
 
-sys.path.insert(0, '/Users/frakbox/Bots/financial_researcher')
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 HEADERS = {"User-Agent": "financial-researcher research@example.com"}
 

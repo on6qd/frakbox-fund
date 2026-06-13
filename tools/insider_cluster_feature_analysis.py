@@ -28,7 +28,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from tools.yfinance_utils import safe_download
 
-CACHE_DIR = "/Users/frakbox/Bots/financial_researcher/data/sec_form4_cache"
+CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data/sec_form4_cache')
 
 CEO_CFO_KEYWORDS = [
     "chief executive", "ceo", "chief financial", "cfo",

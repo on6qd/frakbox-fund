@@ -3,7 +3,8 @@ Quick backtest: Major bank stocks pre-earnings 5d drift
 Context: Q1 2026 earnings starting April 11 (JPM), 14 (WFC, C, GS), 15 (BAC, MS)
 """
 import sys
-sys.path.insert(0, '/Users/frakbox/Bots/financial_researcher')
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from tools.yfinance_utils import safe_download
 import pandas as pd
 import numpy as np

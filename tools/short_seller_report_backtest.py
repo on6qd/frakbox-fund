@@ -16,7 +16,8 @@ Causal mechanism: (1) New investigation findings take days to fully digest,
 """
 
 import sys
-sys.path.insert(0, '/Users/frakbox/Bots/financial_researcher')
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import json
 import market_data
@@ -121,6 +122,6 @@ for evt in result.get('individual_impacts', []):
 
 # Save full result
 print(f"\nFull result keys: {list(result.keys())[:15]}")
-with open('/Users/frakbox/Bots/financial_researcher/data/short_seller_backtest_result.json', 'w') as f:
+with open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data/short_seller_backtest_result.json'), 'w') as f:
     json.dump(result, f, indent=2, default=str)
 print("Saved to data/short_seller_backtest_result.json")

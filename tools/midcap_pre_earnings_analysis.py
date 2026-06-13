@@ -13,10 +13,11 @@ Mid-cap universe: S&P MidCap 400 representative stocks, $1B-$5B market cap typic
 """
 
 import sys
+import os
 import json
 from datetime import datetime
 
-sys.path.insert(0, "/Users/frakbox/Bots/financial_researcher")
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tools.pre_earnings_runup import run_pre_earnings_analysis
 

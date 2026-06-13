@@ -9,3 +9,4 @@ urllib3==1.26.19
 xlrd>=2.0.1
 yfinance==1.2.0
 statsmodels>=0.14.0
+libsql-experimental

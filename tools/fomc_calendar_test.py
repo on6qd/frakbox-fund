@@ -9,10 +9,11 @@ Discovery: 2015-2022, OOS: 2023-2026
 
 import json
 import sys
+import os
 import numpy as np
 from scipy import stats
 
-sys.path.insert(0, "/Users/frakbox/Bots/financial_researcher")
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from tools.yfinance_utils import safe_download
 
 # FOMC announcement dates (2015-2026)

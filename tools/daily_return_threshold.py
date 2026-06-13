@@ -14,12 +14,13 @@ Examples:
   python tools/daily_return_threshold.py --driver FRED:DGS10 --target IBB --benchmark SPY --threshold 15 --driver-unit bps_level
 """
 import sys, json, warnings, argparse
+import os
 import numpy as np
 import pandas as pd
 from datetime import datetime
 
 warnings.filterwarnings("ignore")
-sys.path.insert(0, "/Users/frakbox/Bots/financial_researcher")
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from tools.timeseries import get_series
 
 

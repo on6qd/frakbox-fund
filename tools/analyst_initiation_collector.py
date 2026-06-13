@@ -5,7 +5,8 @@ Tests: When major investment banks initiate coverage with BUY/Outperform,
 does the stock outperform the market over 5-20 days?
 """
 import sys
-sys.path.insert(0, '/Users/frakbox/Bots/financial_researcher')
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import yfinance as yf
 import pandas as pd
 import numpy as np

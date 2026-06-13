@@ -3,7 +3,8 @@ Pre-register n=6-9 insider cluster hypothesis using pre-computed backtest result
 Numbers sourced from the successful backtest run (bfylmnn43.txt).
 """
 import sys
-sys.path.insert(0, '/Users/frakbox/Bots/financial_researcher')
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import research
 import self_review
 import pandas as pd

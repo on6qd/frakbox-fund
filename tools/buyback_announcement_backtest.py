@@ -14,7 +14,8 @@ Mechanism:
 Data: SEC EDGAR 8-K filings with Item 8.01 (other events) mentioning share repurchase
 """
 import sys
-sys.path.insert(0, '/Users/frakbox/Bots/financial_researcher')
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import requests
 import json

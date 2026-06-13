@@ -16,7 +16,7 @@ import sys
 import time
 from datetime import datetime, timedelta
 
-sys.path.insert(0, '/Users/frakbox/Bots/financial_researcher')
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tools.item_302_pipe_scanner import (
     search_item_302,

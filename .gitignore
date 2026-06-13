@@ -8,8 +8,7 @@ data/sec_form4_cache/*.pkl
 data/sec_form4_cache/*.zip
 *.tmp
 research.db
-research.db-wal
-research.db-shm
+research.db-*
 dashboard/data/
 
 # EDGAR Form 4 cache

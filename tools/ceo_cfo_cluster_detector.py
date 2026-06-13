@@ -338,7 +338,7 @@ if __name__ == "__main__":
     clusters = identify_clusters_with_roles(purchases, min_insiders_in_cluster=3)
 
     if len(clusters) > 0:
-        out = "/Users/frakbox/Bots/financial_researcher/data/clusters_with_roles.csv"
+        out = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data/clusters_with_roles.csv')
         clusters.to_csv(out, index=False)
         print(f"\nSaved {len(clusters)} clusters to {out}")
         print("\nSample:")

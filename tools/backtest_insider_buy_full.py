@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 from scipy import stats
 
 # ── Config ────────────────────────────────────────────────────────────────────
-CACHE_DIR = "/Users/frakbox/Bots/financial_researcher/data/sec_form4_cache"
+CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data/sec_form4_cache')
 OUTPUT_PATH = "/tmp/insider_buy_full_results.json"
 TIINGO_KEY = "0ecf1cc45d0c9e24acba402a87dc5fd023b30da0"
 TIINGO_BASE = "https://api.tiingo.com/tiingo/daily"

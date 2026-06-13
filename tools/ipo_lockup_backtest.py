@@ -3,7 +3,8 @@ IPO Lockup Expiration Backtest
 Tests whether stocks drop around lockup expiration (IPO date + 180 days).
 """
 import sys, json
-sys.path.insert(0, '/Users/frakbox/Bots/financial_researcher')
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from datetime import datetime, timedelta
 from tools.yfinance_utils import safe_download
 import numpy as np

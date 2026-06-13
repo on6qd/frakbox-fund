@@ -10,10 +10,11 @@ Controls for:
 Horizons tested: 5d, 10d, 20d.
 """
 import sys
+import os
 import pandas as pd
 import numpy as np
 from scipy import stats
-sys.path.insert(0, '/Users/frakbox/Bots/financial_researcher')
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from tools.yfinance_utils import safe_download
 
 

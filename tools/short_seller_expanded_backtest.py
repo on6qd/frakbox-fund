@@ -13,7 +13,8 @@ Benchmark: SPY
 """
 
 import sys
-sys.path.insert(0, '/Users/frakbox/Bots/financial_researcher')
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import json
 import market_data
@@ -155,6 +156,6 @@ for evt in sorted_events:
     print(f" {marker} {evt.get('event_date','?')} {sym:6s} [{src:12s}] 5d={a5s:>8s} 10d={a10s:>8s}")
 
 # ── Save ───────────────────────────────────────────────────────
-with open('/Users/frakbox/Bots/financial_researcher/data/short_seller_expanded_backtest.json', 'w') as f:
+with open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data/short_seller_expanded_backtest.json'), 'w') as f:
     json.dump(result, f, indent=2, default=str)
 print("\nSaved to data/short_seller_expanded_backtest.json")

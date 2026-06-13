@@ -8,7 +8,8 @@ Pre-registered hypothesis: dbedf16e
 Trigger: OTIS closes below $77.80 AND abnormal return < -2% on earnings day (April 22)
 """
 import sys
-sys.path.insert(0, '/Users/frakbox/Bots/financial_researcher')
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import db
 import trader
 

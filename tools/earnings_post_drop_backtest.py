@@ -7,7 +7,8 @@ If validated, would support the earnings_guidance_cut_drift hypothesis.
 """
 
 import sys
-sys.path.insert(0, '/Users/frakbox/Bots/financial_researcher')
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pandas as pd
 import numpy as np

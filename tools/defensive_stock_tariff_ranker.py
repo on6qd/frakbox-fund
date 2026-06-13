@@ -11,7 +11,8 @@ Usage:
     python3 tools/defensive_stock_tariff_ranker.py [--sector utilities|staples|healthcare]
 """
 import sys
-sys.path.insert(0, '/Users/frakbox/Bots/financial_researcher')
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pandas as pd
 import numpy as np
 from tools.yfinance_utils import safe_download

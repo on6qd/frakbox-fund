@@ -11,7 +11,7 @@ import json
 import time
 import os
 
-sys.path.insert(0, '/Users/frakbox/Bots/financial_researcher')
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import requests
 import yfinance as yf
@@ -21,7 +21,7 @@ from pathlib import Path
 HEADERS = {"User-Agent": "financial-researcher research@example.com"}
 
 # ── Load raw deals ────────────────────────────────────────────────────────────
-raw_path = Path('/Users/frakbox/Bots/financial_researcher/data/seo_bought_deals_raw.json')
+raw_path = Path(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data/seo_bought_deals_raw.json'))
 with open(raw_path) as f:
     raw_deals = json.load(f)
 
@@ -41,7 +41,7 @@ def resolve_ticker(cik: str) -> str | None:
         pass
     return None
 
-cache_path = Path('/Users/frakbox/Bots/financial_researcher/data/seo_cik_ticker_cache.json')
+cache_path = Path(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data/seo_cik_ticker_cache.json'))
 if cache_path.exists():
     with open(cache_path) as f:
         ticker_cache = json.load(f)
@@ -79,7 +79,7 @@ for deal in raw_deals:
 print(f"Deals with tickers: {len(resolved_deals)}")
 
 # ── Large-cap filter (>$500M) ─────────────────────────────────────────────────
-mc_cache_path = Path('/Users/frakbox/Bots/financial_researcher/data/seo_mc_cache.json')
+mc_cache_path = Path(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data/seo_mc_cache.json'))
 if mc_cache_path.exists():
     with open(mc_cache_path) as f:
         mc_cache = json.load(f)
@@ -116,7 +116,7 @@ for deal in filtered_deals:
 
 print(f"After deduplication: {len(deduped)}")
 
-with open('/Users/frakbox/Bots/financial_researcher/data/seo_bought_deals_filtered.json', 'w') as f:
+with open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data/seo_bought_deals_filtered.json'), 'w') as f:
     json.dump(deduped, f, indent=2)
 print("Saved filtered list -> data/seo_bought_deals_filtered.json")
 
@@ -183,7 +183,7 @@ def run_backtest(deals: list, label: str, outfile: str) -> dict:
 
     print_results(result, label)
 
-    with open(f'/Users/frakbox/Bots/financial_researcher/data/{outfile}', 'wb') as f:
+    with open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), f'data/{outfile}'), 'wb') as f:
         pickle.dump(result, f)
     print(f"Saved pickle -> data/{outfile}")
 

@@ -23,6 +23,7 @@ Outputs to stdout.  Also returns result dict for programmatic use.
 """
 
 import sys
+import os
 import warnings
 from datetime import datetime, timedelta
 
@@ -32,7 +33,7 @@ from scipy import stats
 
 warnings.filterwarnings("ignore")
 
-sys.path.insert(0, "/Users/frakbox/Bots/financial_researcher")
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import market_data
 from tools.yfinance_utils import safe_download

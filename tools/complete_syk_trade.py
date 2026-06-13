@@ -80,14 +80,13 @@ def complete_syk(fill_price: float, dry_run: bool = False):
     print(f"\nHypothesis completed: {result}")
     
     # Update knowledge base
-    import sqlite3, json
-    conn = sqlite3.connect('research.db')
-    cur = conn.cursor()
-    
-    cur.execute('SELECT data FROM known_effects WHERE event_type="sp500_52w_low_momentum_short"')
-    row = cur.fetchone()
-    if row:
-        d = json.loads(row[0])
+    import json
+    conn = db.get_db()
+
+    val = db._scalar('SELECT data FROM known_effects WHERE event_type=?',
+                     ('sp500_52w_low_momentum_short',))
+    if val is not None:
+        d = json.loads(val)
         d['syk_oos_result'] = {
             'entry': entry_price,
             'exit': fill_price,
@@ -95,11 +94,10 @@ def complete_syk(fill_price: float, dry_run: bool = False):
             'date': '2026-04-03',
             'verdict': 'MISS - confirms dead end. Stock rose from 52w low.'
         }
-        cur.execute('INSERT OR REPLACE INTO known_effects (event_type, data, last_updated) VALUES (?,?,?)',
+        db._exec('INSERT OR REPLACE INTO known_effects (event_type, data, last_updated) VALUES (?,?,?)',
             ('sp500_52w_low_momentum_short', json.dumps(d), datetime.datetime.now().isoformat()))
         conn.commit()
         print("Updated sp500_52w_low_momentum_short OOS record")
-    conn.close()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Complete SYK trade')

@@ -9,7 +9,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import Counter
 
-sys.path.insert(0, '/Users/frakbox/Bots/financial_researcher')
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from tools.item_302_pipe_scanner import classify_302_dilution_type
 
 RAW_EVENTS = 'tools/item_302_raw_events.json'

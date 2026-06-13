@@ -3,7 +3,8 @@ Sector ETF performance after major US tariff escalation announcements.
 Measures abnormal returns vs SPY across multiple horizons.
 """
 import sys
-sys.path.insert(0, '/Users/frakbox/Bots/financial_researcher')
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import market_data
 

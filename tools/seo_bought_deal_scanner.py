@@ -25,7 +25,7 @@ import requests
 import yfinance as yf
 
 HEADERS = {"User-Agent": "financial-researcher research@example.com"}
-CACHE_DIR = Path("/Users/frakbox/Bots/financial_researcher/data/seo_cache")
+CACHE_DIR = Path(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data/seo_cache'))
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -246,7 +246,7 @@ if __name__ == '__main__':
         ticker_str = d.get('ticker') or 'N/A'
         print(f"  {d['company_name'][:35]:35s} | {ticker_str:6s} | {d['announcement_date']} | 8-K: {d['8k_date']} | gap: {d['days_between']}d")
 
-    output_file = '/Users/frakbox/Bots/financial_researcher/data/seo_bought_deals_raw.json'
+    output_file = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data/seo_bought_deals_raw.json')
     Path(output_file).parent.mkdir(parents=True, exist_ok=True)
     with open(output_file, 'w') as f:
         json.dump(deals, f, indent=2, default=str)

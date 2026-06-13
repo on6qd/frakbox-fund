@@ -18,17 +18,56 @@ from datetime import datetime
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "research.db")
 
+# Load .env so the backend is selected correctly no matter the import order
+# (db.py must not depend on config.py having been imported first). setdefault:
+# real environment variables always win over .env.
+_env_file = os.path.join(os.path.dirname(__file__), ".env")
+if os.path.exists(_env_file):
+    with open(_env_file) as _f:
+        for _line in _f:
+            _line = _line.strip()
+            if _line and not _line.startswith("#") and "=" in _line:
+                _k, _v = _line.split("=", 1)
+                os.environ.setdefault(_k.strip(), _v.strip().strip("'\""))
+
+# ── Backend selection ──────────────────────────────────────────────────────
+# Storage is pluggable: a Turso (libSQL) embedded replica in production, or a
+# local sqlite3 file for dev/CI. db.py is the ONLY module that opens a
+# connection or runs SQL; everything downstream consumes plain dicts and never
+# knows which backend is live.
+TURSO_URL = os.environ.get("TURSO_DATABASE_URL") or os.environ.get("TURSO_URL")
+TURSO_TOKEN = os.environ.get("TURSO_AUTH_TOKEN") or os.environ.get("TURSO_TOKEN")
+
+# DB_BACKEND env forces 'sqlite' or 'libsql'; default auto-detects from Turso env.
+_BACKEND = os.environ.get("DB_BACKEND") or ("libsql" if (TURSO_URL and TURSO_TOKEN) else "sqlite")
+
+if _BACKEND == "libsql":
+    import libsql_experimental as _libsql
+    # libSQL raises ValueError (not sqlite3.IntegrityError) on constraint violations.
+    _INTEGRITY_ERRORS = (sqlite3.IntegrityError, ValueError)
+else:
+    _libsql = None
+    _INTEGRITY_ERRORS = (sqlite3.IntegrityError,)
+
 _local = threading.local()
 
 
 def get_db():
-    """Return a singleton SQLite connection for the current thread."""
+    """Return a singleton connection for the current thread (libSQL or sqlite3)."""
     if not hasattr(_local, "conn") or _local.conn is None:
-        _local.conn = sqlite3.connect(DB_PATH, timeout=10)
-        _local.conn.row_factory = sqlite3.Row
-        _local.conn.execute("PRAGMA journal_mode=WAL")
-        _local.conn.execute("PRAGMA foreign_keys=ON")
-        _local.conn.execute("PRAGMA busy_timeout=5000")
+        if _BACKEND == "libsql":
+            kwargs = {}
+            if TURSO_URL and TURSO_TOKEN:
+                kwargs = {"sync_url": TURSO_URL, "auth_token": TURSO_TOKEN}
+            conn = _libsql.connect(DB_PATH, **kwargs)
+            if kwargs:
+                conn.sync()  # pull latest from the Turso primary
+        else:
+            conn = sqlite3.connect(DB_PATH, timeout=10)
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.execute("PRAGMA foreign_keys=ON")
+            conn.execute("PRAGMA busy_timeout=5000")
+        _local.conn = conn
     return _local.conn
 
 
@@ -39,6 +78,36 @@ def close_db():
         _local.conn = None
 
 
+# ── Query helpers — the ONLY place a row is materialized ───────────────────
+# Rows map to dicts via cursor.description (portable across sqlite3 and libSQL).
+# Params are coerced to tuple because the libSQL binding rejects list params.
+
+def _q(sql, params=()):
+    """Run a SELECT; return rows as a list of dicts."""
+    cur = get_db().execute(sql, tuple(params))
+    cols = [c[0] for c in cur.description]
+    return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+
+def _q1(sql, params=()):
+    """Run a SELECT; return the first row as a dict, or None."""
+    cur = get_db().execute(sql, tuple(params))
+    cols = [c[0] for c in cur.description]
+    row = cur.fetchone()
+    return dict(zip(cols, row)) if row is not None else None
+
+
+def _scalar(sql, params=()):
+    """Run a SELECT; return the first column of the first row, or None."""
+    row = get_db().execute(sql, tuple(params)).fetchone()
+    return row[0] if row is not None else None
+
+
+def _exec(sql, params=()):
+    """Run a write statement; return cursor.lastrowid."""
+    return get_db().execute(sql, tuple(params)).lastrowid
+
+
 def init_db():
     """Create all tables if they don't exist."""
     conn = get_db()
@@ -47,36 +116,27 @@ def init_db():
     _run_migrations(conn)
 
 
+def _table_exists(conn, name):
+    return conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name=?", (name,)
+    ).fetchone() is not None
+
+
+def _columns(conn, table):
+    return {row[1] for row in conn.execute("PRAGMA table_info(" + table + ")").fetchall()}
+
+
 def _run_migrations(conn):
-    """Run incremental schema migrations for existing databases."""
-    # Migration 1: add success_criteria column to hypotheses
-    try:
-        conn.execute("SELECT success_criteria FROM hypotheses LIMIT 1")
-    except sqlite3.OperationalError:
+    """Incremental schema migrations via introspection (backend-agnostic)."""
+    hcols = _columns(conn, "hypotheses")
+    if "success_criteria" not in hcols:
         conn.execute("ALTER TABLE hypotheses ADD COLUMN success_criteria TEXT")
-        conn.commit()
-
-    # Migration 2: add hypothesis_class and spec_json columns for non-event hypothesis types
-    try:
-        conn.execute("SELECT hypothesis_class FROM hypotheses LIMIT 1")
-    except sqlite3.OperationalError:
+    if "hypothesis_class" not in hcols:
         conn.execute("ALTER TABLE hypotheses ADD COLUMN hypothesis_class TEXT DEFAULT 'event'")
-        conn.commit()
-
-    try:
-        conn.execute("SELECT spec_json FROM hypotheses LIMIT 1")
-    except sqlite3.OperationalError:
+    if "spec_json" not in hcols:
         conn.execute("ALTER TABLE hypotheses ADD COLUMN spec_json TEXT")
-        conn.commit()
-
-    # Index on hypothesis_class for filtering
     conn.execute("CREATE INDEX IF NOT EXISTS idx_hypotheses_class ON hypotheses(hypothesis_class)")
-    conn.commit()
-
-    # Migration 3: add oos_observations and oos_daily_prices tables
-    try:
-        conn.execute("SELECT id FROM oos_observations LIMIT 1")
-    except sqlite3.OperationalError:
+    if not _table_exists(conn, "oos_observations"):
         conn.executescript("""
             CREATE TABLE IF NOT EXISTS oos_observations (
                 id TEXT PRIMARY KEY,
@@ -112,7 +172,7 @@ def _run_migrations(conn):
             );
             CREATE INDEX IF NOT EXISTS idx_oos_daily_obs ON oos_daily_prices(observation_id);
         """)
-        conn.commit()
+    conn.commit()
 
 
 # ---------------------------------------------------------------------------
@@ -410,7 +470,7 @@ _HYPOTHESIS_COLUMNS = {
 
 
 def _hypothesis_to_dict(row):
-    """Convert a sqlite3.Row to a hypothesis dict, deserializing JSON fields."""
+    """Convert a row dict to a hypothesis dict, deserializing JSON fields."""
     d = dict(row)
     # Try to deserialize any string that looks like JSON (starts with [ or {)
     for field in list(d.keys()):
@@ -458,9 +518,8 @@ def _hypothesis_from_dict(d):
 
 def load_hypotheses():
     """Load all hypotheses as a list of dicts (same format as old JSON file)."""
-    conn = get_db()
     init_db()
-    rows = conn.execute("SELECT * FROM hypotheses ORDER BY created").fetchall()
+    rows = _q("SELECT * FROM hypotheses ORDER BY created")
     return [_hypothesis_to_dict(row) for row in rows]
 
 
@@ -490,37 +549,34 @@ def _upsert_hypothesis(h, conn):
     col_names = ", ".join(columns)
     conn.execute(
         f"INSERT OR REPLACE INTO hypotheses ({col_names}) VALUES ({placeholders})",
-        [row[c] for c in columns],
+        tuple(row[c] for c in columns),
     )
 
 
 def get_hypotheses_by_status(status):
     """Load hypotheses filtered by status."""
-    conn = get_db()
     init_db()
-    rows = conn.execute(
+    rows = _q(
         "SELECT * FROM hypotheses WHERE status = ? ORDER BY created", (status,)
-    ).fetchall()
+    )
     return [_hypothesis_to_dict(row) for row in rows]
 
 
 def get_hypothesis_by_id(hypothesis_id):
     """Load a single hypothesis by ID."""
-    conn = get_db()
     init_db()
-    row = conn.execute(
+    row = _q1(
         "SELECT * FROM hypotheses WHERE id = ?", (hypothesis_id,)
-    ).fetchone()
+    )
     return _hypothesis_to_dict(row) if row else None
 
 
 def find_hypothesis_by_idempotency_key(key):
     """Find a hypothesis by idempotency key (for duplicate detection)."""
-    conn = get_db()
     init_db()
-    row = conn.execute(
+    row = _q1(
         "SELECT * FROM hypotheses WHERE idempotency_key = ?", (key,)
-    ).fetchone()
+    )
     return _hypothesis_to_dict(row) if row else None
 
 
@@ -541,12 +597,10 @@ def update_hypothesis_fields(hypothesis_id, **fields):
 
 def count_hypotheses_by_status(status):
     """Count hypotheses with a given status (without loading full data)."""
-    conn = get_db()
     init_db()
-    row = conn.execute(
+    return _scalar(
         "SELECT COUNT(*) FROM hypotheses WHERE status = ?", (status,)
-    ).fetchone()
-    return row[0]
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -559,19 +613,19 @@ def load_knowledge():
     init_db()
     kb = {"literature": {}, "known_effects": {}, "dead_ends": []}
 
-    for row in conn.execute("SELECT * FROM literature").fetchall():
+    for row in _q("SELECT * FROM literature"):
         data = json.loads(row["data"])
         data["recorded"] = row["recorded"]
         kb["literature"][row["event_type"]] = data
 
-    for row in conn.execute("SELECT * FROM known_effects").fetchall():
+    for row in _q("SELECT * FROM known_effects"):
         data = json.loads(row["data"])
         if isinstance(data, str):
             data = {"description": data}
         data["last_updated"] = row["last_updated"]
         kb["known_effects"][row["event_type"]] = data
 
-    for row in conn.execute("SELECT * FROM dead_ends ORDER BY id").fetchall():
+    for row in _q("SELECT * FROM dead_ends ORDER BY id"):
         entry = {
             "event_type": row["event_type"],
             "reason": row["reason"],
@@ -646,9 +700,9 @@ def record_dead_end(event_type, reason):
     conn = get_db()
     init_db()
     # Check if already exists — update if so
-    existing = conn.execute(
+    existing = _q1(
         "SELECT id FROM dead_ends WHERE event_type = ?", (event_type,)
-    ).fetchone()
+    )
     if existing:
         conn.execute(
             "UPDATE dead_ends SET reason = ?, updated = ? WHERE event_type = ?",
@@ -664,19 +718,16 @@ def record_dead_end(event_type, reason):
 
 def get_dead_ends():
     """Get all dead ends."""
-    conn = get_db()
     init_db()
-    rows = conn.execute("SELECT * FROM dead_ends ORDER BY id").fetchall()
-    return [dict(row) for row in rows]
+    return _q("SELECT * FROM dead_ends ORDER BY id")
 
 
 def get_known_effect(event_type):
     """Get a single known effect by event type."""
-    conn = get_db()
     init_db()
-    row = conn.execute(
+    row = _q1(
         "SELECT * FROM known_effects WHERE event_type = ?", (event_type,)
-    ).fetchone()
+    )
     if row:
         data = json.loads(row["data"])
         if isinstance(data, str):
@@ -696,7 +747,7 @@ def load_queue():
     init_db()
     q = {"queue": [], "event_watchlist": [], "next_session_priorities": []}
 
-    for row in conn.execute("SELECT * FROM research_queue ORDER BY priority, added").fetchall():
+    for row in _q("SELECT * FROM research_queue ORDER BY priority, added"):
         task = {
             "id": row["id"],
             "category": row["category"],
@@ -721,7 +772,7 @@ def load_queue():
                 pass
         q["queue"].append(task)
 
-    for row in conn.execute("SELECT * FROM event_watchlist ORDER BY id").fetchall():
+    for row in _q("SELECT * FROM event_watchlist ORDER BY id"):
         entry = {
             "event": row["event"],
             "expected_date": row["expected_date"],
@@ -738,15 +789,15 @@ def load_queue():
             entry["triggered_date"] = row["triggered_date"]
         q["event_watchlist"].append(entry)
 
-    for row in conn.execute("SELECT * FROM session_priorities ORDER BY id").fetchall():
+    for row in _q("SELECT * FROM session_priorities ORDER BY id"):
         q["next_session_priorities"].append({
             "task": row["task"],
             "set_by_session": row["set_by_session"],
         })
 
-    handoff_row = conn.execute(
+    handoff_row = _q1(
         "SELECT * FROM session_handoff WHERE id = 1"
-    ).fetchone()
+    )
     if handoff_row:
         try:
             q["session_handoff"] = json.loads(handoff_row["data"])
@@ -842,10 +893,10 @@ def add_research_task(category, question, priority, reasoning, depends_on=None):
     import uuid
 
     # Deduplication
-    existing = conn.execute(
+    existing = _q1(
         "SELECT id FROM research_queue WHERE status = 'pending' AND category = ? AND question = ?",
         (category, question),
-    ).fetchone()
+    )
     if existing:
         return None
 
@@ -883,11 +934,14 @@ def complete_research_task(task_id, findings_summary):
         conn.commit()
         return True
 
-    # Fallback: match by category
+    # Fallback: match by category. Use a subquery for the ORDER BY/LIMIT —
+    # `UPDATE ... ORDER BY ... LIMIT` needs the SQLITE_ENABLE_UPDATE_DELETE_LIMIT
+    # compile flag, which neither stock sqlite3 nor libSQL ships with.
     result = conn.execute(
         "UPDATE research_queue SET status = 'completed', completed = ?, findings = ? "
+        "WHERE id = (SELECT id FROM research_queue "
         "WHERE category = ? AND status IN ('pending', 'in_progress') "
-        "ORDER BY priority LIMIT 1",
+        "ORDER BY priority LIMIT 1)",
         (now, findings_summary, task_id),
     )
     if result.rowcount > 0:
@@ -923,7 +977,7 @@ def add_event_to_watchlist(event_description, expected_date, symbol, hypothesis_
             "added": datetime.now().isoformat(),
             "status": "watching",
         }
-    except sqlite3.IntegrityError:
+    except _INTEGRITY_ERRORS:
         return None  # Duplicate
 
 
@@ -951,16 +1005,15 @@ def set_next_session_priorities(priorities, handoff=None):
 
 def get_next_research_task():
     """Get the highest-priority pending research task whose dependencies are met."""
-    conn = get_db()
     init_db()
-    completed_ids_rows = conn.execute(
+    completed_ids_rows = _q(
         "SELECT id FROM research_queue WHERE status = 'completed'"
-    ).fetchall()
+    )
     completed_ids = {row["id"] for row in completed_ids_rows}
 
-    tasks = conn.execute(
+    tasks = _q(
         "SELECT * FROM research_queue WHERE status = 'pending' ORDER BY priority, added"
-    ).fetchall()
+    )
 
     for task in tasks:
         dep = task["depends_on"]
@@ -974,13 +1027,11 @@ def get_due_events(today=None):
     """Get watchlist events that are due today or overdue."""
     if today is None:
         today = datetime.now().strftime("%Y-%m-%d")
-    conn = get_db()
     init_db()
-    rows = conn.execute(
+    return _q(
         "SELECT * FROM event_watchlist WHERE status = 'watching' AND expected_date <= ?",
         (today,),
-    ).fetchall()
-    return [dict(row) for row in rows]
+    )
 
 
 def mark_event_triggered(event_description):
@@ -1075,7 +1126,7 @@ def append_journal_entry(date, session_type, investigated, findings,
     """
     conn = get_db()
     init_db()
-    cur = conn.execute(
+    rowid = _exec(
         "INSERT INTO research_journal (date, session_type, investigated, findings, "
         "surprised_by, next_step, category, public_summary) "
         "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
@@ -1083,23 +1134,21 @@ def append_journal_entry(date, session_type, investigated, findings,
          category, public_summary),
     )
     conn.commit()
-    return cur.lastrowid
+    return rowid
 
 
 def get_recent_journal(n=5):
     """Get the N most recent journal entries (newest first)."""
-    conn = get_db()
     init_db()
-    rows = conn.execute(
+    rows = _q(
         "SELECT * FROM research_journal ORDER BY id DESC LIMIT ?", (n,)
-    ).fetchall()
+    )
     return [dict(r) for r in reversed(rows)]  # return in chronological order
 
 
 def count_journal_entries():
-    conn = get_db()
     init_db()
-    return conn.execute("SELECT COUNT(*) FROM research_journal").fetchone()[0]
+    return _scalar("SELECT COUNT(*) FROM research_journal")
 
 
 # ---------------------------------------------------------------------------
@@ -1110,29 +1159,28 @@ def append_friction(date, category, description, turns_wasted=0, potential_fix=N
     """Append one friction log entry. Returns the row id."""
     conn = get_db()
     init_db()
-    cur = conn.execute(
+    rowid = _exec(
         "INSERT INTO friction_log (date, category, description, turns_wasted, potential_fix) "
         "VALUES (?, ?, ?, ?, ?)",
         (date, category, description, turns_wasted, potential_fix),
     )
     conn.commit()
-    return cur.lastrowid
+    return rowid
 
 
 def get_friction_summary(top_n=3):
     """Get top friction categories with counts and latest description."""
-    conn = get_db()
     init_db()
-    rows = conn.execute(
+    rows = _q(
         "SELECT category, COUNT(*) as cnt FROM friction_log GROUP BY category ORDER BY cnt DESC LIMIT ?",
         (top_n,),
-    ).fetchall()
+    )
     result = []
     for row in rows:
-        latest = conn.execute(
+        latest = _q1(
             "SELECT description FROM friction_log WHERE category = ? ORDER BY id DESC LIMIT 1",
             (row["category"],),
-        ).fetchone()
+        )
         result.append({
             "category": row["category"],
             "count": row["cnt"],
@@ -1142,9 +1190,8 @@ def get_friction_summary(top_n=3):
 
 
 def count_friction_entries():
-    conn = get_db()
     init_db()
-    return conn.execute("SELECT COUNT(*) FROM friction_log").fetchone()[0]
+    return _scalar("SELECT COUNT(*) FROM friction_log")
 
 
 # ---------------------------------------------------------------------------
@@ -1175,17 +1222,22 @@ def get_daily_token_usage(date_str=None):
     init_db()
     if date_str is None:
         date_str = datetime.now().strftime("%Y-%m-%d")
-    row = conn.execute(
-        "SELECT COALESCE(SUM(input_tokens),0), COALESCE(SUM(output_tokens),0), "
-        "COALESCE(SUM(cache_read_tokens),0), COALESCE(SUM(cache_creation_tokens),0), "
-        "COALESCE(SUM(total_tokens),0), COALESCE(SUM(api_calls),0), COUNT(*) "
+    row = _q1(
+        "SELECT COALESCE(SUM(input_tokens),0) AS input_tokens, "
+        "COALESCE(SUM(output_tokens),0) AS output_tokens, "
+        "COALESCE(SUM(cache_read_tokens),0) AS cache_read_tokens, "
+        "COALESCE(SUM(cache_creation_tokens),0) AS cache_creation_tokens, "
+        "COALESCE(SUM(total_tokens),0) AS total_tokens, "
+        "COALESCE(SUM(api_calls),0) AS api_calls, COUNT(*) AS sessions "
         "FROM token_usage WHERE timestamp LIKE ?",
         (date_str + "%",),
-    ).fetchone()
+    )
     return {
-        "input_tokens": row[0], "output_tokens": row[1],
-        "cache_read_tokens": row[2], "cache_creation_tokens": row[3],
-        "total_tokens": row[4], "api_calls": row[5], "sessions": row[6],
+        "input_tokens": row["input_tokens"], "output_tokens": row["output_tokens"],
+        "cache_read_tokens": row["cache_read_tokens"],
+        "cache_creation_tokens": row["cache_creation_tokens"],
+        "total_tokens": row["total_tokens"], "api_calls": row["api_calls"],
+        "sessions": row["sessions"],
     }
 
 
@@ -1235,9 +1287,8 @@ def append_pre_registration(hypothesis_id, prediction_hash, data):
 
 def get_pre_registrations():
     """Get all pre-registration entries."""
-    conn = get_db()
     init_db()
-    rows = conn.execute("SELECT * FROM pre_registrations ORDER BY id").fetchall()
+    rows = _q("SELECT * FROM pre_registrations ORDER BY id")
     result = []
     for r in rows:
         d = dict(r)
@@ -1255,9 +1306,8 @@ def get_pre_registrations():
 
 def load_patterns():
     """Load all patterns as a dict keyed by event_type."""
-    conn = get_db()
     init_db()
-    rows = conn.execute("SELECT * FROM patterns").fetchall()
+    rows = _q("SELECT * FROM patterns")
     result = {}
     for r in rows:
         try:
@@ -1297,9 +1347,8 @@ def save_pattern(event_type, data):
 
 def get_state(key):
     """Get a state value by key. Returns parsed dict/value or None."""
-    conn = get_db()
     init_db()
-    row = conn.execute("SELECT value FROM kv_state WHERE key = ?", (key,)).fetchone()
+    row = _q1("SELECT value FROM kv_state WHERE key = ?", (key,))
     if not row:
         return None
     try:
@@ -1338,12 +1387,11 @@ def append_scanner_signal(scanner, data):
 
 def get_scanner_signals(scanner, limit=50):
     """Get recent signals for a scanner."""
-    conn = get_db()
     init_db()
-    rows = conn.execute(
+    rows = _q(
         "SELECT * FROM scanner_signals WHERE scanner = ? ORDER BY id DESC LIMIT ?",
         (scanner, limit),
-    ).fetchall()
+    )
     result = []
     for r in rows:
         d = dict(r)
@@ -1405,7 +1453,7 @@ def migrate_logs(base_dir=None):
         return str(val)
 
     # 1. Research journal
-    if conn.execute("SELECT COUNT(*) FROM research_journal").fetchone()[0] == 0:
+    if _scalar("SELECT COUNT(*) FROM research_journal") == 0:
         entries = _read_jsonl(os.path.join(base_dir, "logs", "research_journal.jsonl"))
         for e in entries:
             conn.execute(
@@ -1418,7 +1466,7 @@ def migrate_logs(base_dir=None):
         summary["journal"] = len(entries)
 
     # 2. Friction log
-    if conn.execute("SELECT COUNT(*) FROM friction_log").fetchone()[0] == 0:
+    if _scalar("SELECT COUNT(*) FROM friction_log") == 0:
         entries = _read_jsonl(os.path.join(base_dir, "logs", "friction_log.jsonl"))
         for e in entries:
             conn.execute(
@@ -1430,7 +1478,7 @@ def migrate_logs(base_dir=None):
         summary["friction"] = len(entries)
 
     # 3. Token usage
-    if conn.execute("SELECT COUNT(*) FROM token_usage").fetchone()[0] == 0:
+    if _scalar("SELECT COUNT(*) FROM token_usage") == 0:
         entries = _read_jsonl(os.path.join(base_dir, "logs", "token_usage.jsonl"))
         for e in entries:
             conn.execute(
@@ -1445,7 +1493,7 @@ def migrate_logs(base_dir=None):
         summary["token_usage"] = len(entries)
 
     # 4. Trade log
-    if conn.execute("SELECT COUNT(*) FROM trade_log").fetchone()[0] == 0:
+    if _scalar("SELECT COUNT(*) FROM trade_log") == 0:
         entries = _read_jsonl(os.path.join(base_dir, "logs", "trade_log.jsonl"))
         for e in entries:
             known = {"type", "hypothesis_id", "symbol", "direction", "entry_price",
@@ -1464,7 +1512,7 @@ def migrate_logs(base_dir=None):
         summary["trade_log"] = len(entries)
 
     # 5. Pre-registrations (results.jsonl)
-    if conn.execute("SELECT COUNT(*) FROM pre_registrations").fetchone()[0] == 0:
+    if _scalar("SELECT COUNT(*) FROM pre_registrations") == 0:
         entries = _read_jsonl(os.path.join(base_dir, "results.jsonl"))
         for e in entries:
             conn.execute(
@@ -1478,7 +1526,7 @@ def migrate_logs(base_dir=None):
         summary["pre_registrations"] = len(entries)
 
     # 6. Patterns
-    if conn.execute("SELECT COUNT(*) FROM patterns").fetchone()[0] == 0:
+    if _scalar("SELECT COUNT(*) FROM patterns") == 0:
         data = _read_json(os.path.join(base_dir, "patterns.json"))
         if data and isinstance(data, dict):
             for event_type, pattern_data in data.items():
@@ -1519,7 +1567,7 @@ def migrate_logs(base_dir=None):
                 summary[key] = 1
 
     # 9. Scanner signals from JSONL files
-    if conn.execute("SELECT COUNT(*) FROM scanner_signals").fetchone()[0] == 0:
+    if _scalar("SELECT COUNT(*) FROM scanner_signals") == 0:
         for scanner, path in [
             ("52w_low", os.path.join(base_dir, "logs", "52w_low_signals.jsonl")),
             ("sp500_additions", os.path.join(base_dir, "logs", "sp500_additions_detected.jsonl")),
@@ -1556,12 +1604,10 @@ def snapshot_nav(date, equity, cash, position_count=0):
 
 def get_nav_history():
     """Return all NAV snapshots ordered by date."""
-    conn = get_db()
     init_db()
-    rows = conn.execute(
+    return _q(
         "SELECT date, equity, cash, position_count FROM nav_snapshots ORDER BY date"
-    ).fetchall()
-    return [dict(r) for r in rows]
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1589,11 +1635,10 @@ def store_task_result(result_id, task_type, parameters, result, summary):
 
 def get_task_result(result_id):
     """Retrieve a task result by ID. Returns full result dict or None."""
-    conn = get_db()
     init_db()
-    row = conn.execute(
+    row = _q1(
         "SELECT * FROM task_results WHERE id = ?", (result_id,)
-    ).fetchone()
+    )
     if row is None:
         return None
     d = dict(row)
@@ -1609,31 +1654,26 @@ def get_task_result(result_id):
 
 def get_task_summary(result_id):
     """Retrieve just the summary string for a task result."""
-    conn = get_db()
     init_db()
-    row = conn.execute(
+    return _scalar(
         "SELECT summary FROM task_results WHERE id = ?", (result_id,)
-    ).fetchone()
-    return row["summary"] if row else None
+    )
 
 
 def get_recent_task_results(task_type=None, limit=20):
     """Retrieve recent task results, optionally filtered by type."""
-    conn = get_db()
     init_db()
     if task_type:
-        rows = conn.execute(
+        return _q(
             "SELECT id, task_type, summary, timestamp FROM task_results "
             "WHERE task_type = ? ORDER BY timestamp DESC LIMIT ?",
             (task_type, limit),
-        ).fetchall()
-    else:
-        rows = conn.execute(
-            "SELECT id, task_type, summary, timestamp FROM task_results "
-            "ORDER BY timestamp DESC LIMIT ?",
-            (limit,),
-        ).fetchall()
-    return [dict(r) for r in rows]
+        )
+    return _q(
+        "SELECT id, task_type, summary, timestamp FROM task_results "
+        "ORDER BY timestamp DESC LIMIT ?",
+        (limit,),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1664,25 +1704,20 @@ def create_oos_observation(obs_id, signal_type, symbol, benchmark, direction,
 
 def get_oos_observation(obs_id):
     """Fetch a single OOS observation by ID."""
-    conn = get_db()
     init_db()
-    row = conn.execute("SELECT * FROM oos_observations WHERE id = ?", (obs_id,)).fetchone()
-    return dict(row) if row else None
+    return _q1("SELECT * FROM oos_observations WHERE id = ?", (obs_id,))
 
 
 def get_active_oos_observations():
     """Get all OOS observations with status='tracking'."""
-    conn = get_db()
     init_db()
-    rows = conn.execute(
+    return _q(
         "SELECT * FROM oos_observations WHERE status = 'tracking' ORDER BY entry_date",
-    ).fetchall()
-    return [dict(r) for r in rows]
+    )
 
 
 def get_oos_observations(status=None, signal_type=None):
     """Get OOS observations with optional filters."""
-    conn = get_db()
     init_db()
     query = "SELECT * FROM oos_observations WHERE 1=1"
     params = []
@@ -1693,8 +1728,7 @@ def get_oos_observations(status=None, signal_type=None):
         query += " AND signal_type = ?"
         params.append(signal_type)
     query += " ORDER BY entry_date DESC"
-    rows = conn.execute(query, params).fetchall()
-    return [dict(r) for r in rows]
+    return _q(query, params)
 
 
 def update_oos_status(obs_id, status):
@@ -1738,10 +1772,8 @@ def upsert_oos_daily_price(observation_id, day_number, trade_date,
 
 def get_oos_daily_prices(observation_id):
     """Get all daily prices for an OOS observation, ordered by day_number."""
-    conn = get_db()
     init_db()
-    rows = conn.execute(
+    return _q(
         "SELECT * FROM oos_daily_prices WHERE observation_id = ? ORDER BY day_number",
         (observation_id,),
-    ).fetchall()
-    return [dict(r) for r in rows]
+    )

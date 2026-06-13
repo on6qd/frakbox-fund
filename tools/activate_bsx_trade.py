@@ -4,7 +4,8 @@ Pre-registered hypothesis: 359e9e42
 Trigger: BSX closes below $67.56 AND abnormal return < -2% on earnings day (April 22)
 """
 import sys
-sys.path.insert(0, '/Users/frakbox/Bots/financial_researcher')
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import db
 import trader
 

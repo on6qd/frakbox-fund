@@ -22,9 +22,10 @@ stronger AND OOS-confirmed.
 import argparse
 import json
 import sys
+import os
 from datetime import datetime, timedelta
 
-sys.path.insert(0, '/Users/frakbox/Bots/financial_researcher')
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tools.nt_10k_first_vs_repeat import fetch_nt10k_range, classify
 from tools.yfinance_utils import get_close_prices

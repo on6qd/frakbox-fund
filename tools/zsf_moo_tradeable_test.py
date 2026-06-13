@@ -8,10 +8,11 @@ Granger lead-lag is artifact, not tradeable.
 Design: same as HG=F/XLB test but for ZS=F/MOO.
 """
 import sys
+import os
 import numpy as np
 from scipy import stats
 
-sys.path.insert(0, "/Users/frakbox/Bots/financial_researcher")
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from tools.timeseries import get_aligned_returns
 
 

@@ -21,13 +21,13 @@ from datetime import datetime, timedelta
 import warnings
 warnings.filterwarnings('ignore')
 
-sys.path.insert(0, '/Users/frakbox/Bots/financial_researcher')
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from tools.yfinance_utils import safe_download, get_close_prices
 from tools.largecap_filter import get_market_cap, _load_market_cap_cache, _save_market_cap_cache
 
 # ── Config ──────────────────────────────────────────────────────────────────
 EDGAR_HEADERS = {
-    'User-Agent': 'financial_researcher_bot research@example.com',
+    'User-Agent': 'frakbox_fund_bot research@example.com',
     'Accept': 'application/json',
 }
 MIN_MARKET_CAP_M = 1_000   # $1B+

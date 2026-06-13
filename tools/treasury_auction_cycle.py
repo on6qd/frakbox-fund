@@ -5,8 +5,9 @@ TLT trading day by signed distance to the nearest such auction, and compares win
 mean daily returns vs non-window baseline. Discovery vs OOS split.
 """
 import sys, json, urllib.request, datetime as dt
+import os
 import numpy as np
-sys.path.insert(0, '/Users/frakbox/Bots/financial_researcher')
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from tools.yfinance_utils import get_close_prices
 
 def fetch_auctions():

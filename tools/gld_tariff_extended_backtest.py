@@ -3,7 +3,8 @@ GLD tariff extended backtest — finds additional tariff escalation dates
 and measures 20d abnormal returns vs SPY.
 """
 import sys
-sys.path.insert(0, '/Users/frakbox/Bots/financial_researcher')
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import numpy as np
 from scipy import stats

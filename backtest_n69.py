@@ -1,9 +1,10 @@
 import sys
-sys.path.insert(0, '/Users/frakbox/Bots/financial_researcher')
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import market_data
 import pandas as pd
 
-df = pd.read_csv('/Users/frakbox/Bots/financial_researcher/data/cluster_with_regime.csv')
+df = pd.read_csv(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data/cluster_with_regime.csv'))
 n69 = df[df['n_insiders'].between(6, 9)].copy()
 
 discovery = n69[n69['cluster_date'].str[:4].isin(['2021', '2022'])]

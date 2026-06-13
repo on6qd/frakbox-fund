@@ -184,14 +184,12 @@ def run_observer(record=False):
 
             if record:
                 # Update knowledge base
-                import sqlite3, json
-                conn = sqlite3.connect('research.db')
-                cur = conn.cursor()
-                cur.execute('SELECT event_type, data FROM known_effects WHERE event_type = ?',
-                           [KNOWLEDGE_KEY])
-                rows = cur.fetchall()
+                import json
+                conn = db.get_db()
+                rows = db._q('SELECT event_type, data FROM known_effects WHERE event_type = ?',
+                             (KNOWLEDGE_KEY,))
                 if rows:
-                    d = json.loads(rows[0][1])
+                    d = json.loads(rows[0]['data'])
                     if 'informal_oos_instances' not in d:
                         d['informal_oos_instances'] = []
                     d['informal_oos_instances'].append({
@@ -204,11 +202,10 @@ def run_observer(record=False):
                         'note': 'INFORMAL — not traded due to Liberation Day capacity conflict',
                         'recorded': datetime.now().strftime('%Y-%m-%d'),
                     })
-                    cur.execute('UPDATE known_effects SET data = ? WHERE event_type = ?',
-                               [json.dumps(d), KNOWLEDGE_KEY])
+                    db._exec('UPDATE known_effects SET data = ? WHERE event_type = ?',
+                             (json.dumps(d), KNOWLEDGE_KEY))
                     conn.commit()
                     print(f"✓ Recorded OOS instance to knowledge base ({KNOWLEDGE_KEY})")
-                conn.close()
         else:
             print("5d exit data not yet available.")
     else:
