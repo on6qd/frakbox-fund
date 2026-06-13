@@ -837,12 +837,20 @@ def save_queue(q):
 
     handoff = q.get("session_handoff")
     if handoff:
-        written_at = handoff.pop("written_at", datetime.now().isoformat())
+        # handoff may be a dict (with a "written_at" key) or a plain string;
+        # load_queue tolerates both, so save must too.
+        if isinstance(handoff, dict):
+            written_at = handoff.pop("written_at", datetime.now().isoformat())
+            data = json.dumps(handoff)
+        else:
+            written_at = datetime.now().isoformat()
+            data = json.dumps(handoff)
         conn.execute(
             "INSERT OR REPLACE INTO session_handoff (id, data, written_at) VALUES (1, ?, ?)",
-            (json.dumps(handoff), written_at),
+            (data, written_at),
         )
-        handoff["written_at"] = written_at
+        if isinstance(handoff, dict):
+            handoff["written_at"] = written_at
 
     conn.commit()
 
