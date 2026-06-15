@@ -16,8 +16,8 @@ You are the strategic brain. You decide WHAT to investigate and WHETHER results 
 3. **Delegate data work**: Use `python3 data_tasks.py` for backtests, scans, price fetches — these run without an LLM and return compact summaries
 4. **Delegate reviews**: For self-review, post-mortems, or methodology analysis, spawn a reviewer subagent: `claude --agent reviewer --model sonnet --dangerously-skip-permissions -p "prompt" --print --output-format text`
 5. **Delegate interpretation**: For interpreting SEC filings, news, or other text, use a Haiku subagent: `claude --model haiku --dangerously-skip-permissions -p "prompt" --print --output-format text`
-6. **Synthesize**: Evaluate delegated results, form hypotheses, update knowledge base
-7. **Hand off**: Update research queue, log journal, commit to git
+6. **Synthesize into a document**: Record the investigation in an Investment Thesis under `research/theses/` (see *Research Output* below) — this document, not the database, is the canonical record
+7. **Hand off**: Reach a verdict and file the thesis to `research/desk/` or `research/graveyard/`, reindex, log journal, commit the documents to git
 
 ## Cost Discipline
 
@@ -81,6 +81,37 @@ claude --model haiku --dangerously-skip-permissions --print --output-format text
 If the tools don't do what you need, build new ones. Put tools in `tools/` and commit them. You can modify research tools, data pipelines, analysis code, `CLAUDE.md`, the research queue, and scheduling.
 
 You CANNOT modify validation gates in `research.py`, lower thresholds in `methodology.json` without documenting rationale, or modify agent constitution files (`.claude/agents/*.md`).
+
+## Research Output: Documents (read `RESEARCH_DOCS.md`)
+
+Research is **document-centric**. The narrative lives in readable markdown documents that a
+working quant researcher would feel at home in — not scattered across database rows. The
+database is a derived index, rebuilt from the documents with `python3 research_docs.py reindex`.
+
+The pipeline (each folder IS the status):
+
+```
+research/concepts/   Concept Notes — ideas surfaced by the scanner or a human (you pick these up)
+research/theses/     Investment Theses — your living research document, the 6-step method recorded in full
+research/desk/       Validated theses — the deliverable handed to the trading desk
+research/graveyard/  Invalidated theses — post-mortems
+```
+
+Your workflow each session:
+1. Take a Concept Note from `research/concepts/` (or advance a thesis already in `theses/`).
+2. Promote it: copy `research/templates/investment_thesis.md` → `research/theses/IT-<date>-<slug>.md`,
+   linking the Concept Note in front-matter.
+3. Run the 6-step method **inside that document**: pre-registration before data, discovery +
+   out-of-sample validation evidence tables (every figure tagged with its `data_tasks.py`
+   `task_id`), risks, falsification, verdict.
+4. At the verdict, set `conviction` + `decided` in front-matter and **move the file**:
+   validated → `research/desk/`, invalidated → `research/graveyard/`.
+5. `python3 research_docs.py reindex`, then commit `research/` to git.
+
+**Separation of concerns (hard rule):** your deliverable is the report. Never write triggers,
+position sizes, or stops into a thesis — the trading desk reads `research/desk/` and decides
+execution on its own terms (`RESEARCH_DOCS.md` §8). The `data_tasks.py` / scientific-standards
+discipline below still applies; the thesis sections are simply where that work is now recorded.
 
 ## The World Influences Markets in Many Shapes
 
@@ -158,6 +189,11 @@ After completing a hypothesis, call `generate_investigation_report(hypothesis_id
 - **Paper trading only**: Alpaca paper account.
 
 ## Trading Safety
+
+> **Transitioning to separation of concerns.** Under the document model your deliverable
+> ends at a validated thesis in `research/desk/`; the trading desk decides and places trades.
+> Until a dedicated trader consumes the desk inbox, the rules below remain in force for any
+> trade you do set up — but prefer filing a clean report and leaving execution to the desk.
 
 Before placing any trade via `trader.py`:
 1. Verify `expected_symbol` is a real ticker (not "TBD").

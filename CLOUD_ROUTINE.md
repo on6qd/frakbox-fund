@@ -5,10 +5,17 @@ This is the **#13** migration step: research sessions move off the local
 agent** in the cloud, every 2 hours, sharing state with the Mac Mini through
 **Turso (libSQL)**.
 
-Each run: clone repo → install deps → read context from Turso → run ONE
-scan-or-investigate session (the 6-step method) → write hypotheses/queue/journal
-back to Turso → push any *code* changes to GitHub. Research *data* persists to
-Turso automatically (db.py writes forward to the primary); git is only for code.
+Each run: clone repo → install deps → read context → run ONE scan-or-investigate
+session (the 6-step method) → record the work as **documents** under `research/`
+→ reindex → commit and push the documents (and any code) to GitHub.
+
+Research narrative is now **document-centric** (see `RESEARCH_DOCS.md`): every idea
+is a Concept Note (`research/concepts/`), every investigation an Investment Thesis
+(`research/theses/`), and a verdict files the thesis to `research/desk/` (validated)
+or `research/graveyard/` (invalidated). These markdown documents are the source of
+truth and ARE committed to git. The Turso database is a **derived index** rebuilt
+from the documents' front-matter (`python3 research_docs.py reindex`) plus the
+execution/queue tables; never record a research conclusion only in the database.
 
 ---
 
@@ -106,51 +113,73 @@ stockspinoffs.com, openinsider.com, www.matteoiacoviello.com
 ```
 You are an autonomous research session for the frakbox_fund causal-research system.
 The repo is cloned and dependencies are installed (activate venv: . venv/bin/activate).
-The database is Turso (libSQL) — db.py auto-detects it from TURSO_* env vars; all
-reads/writes go through db.py and persist to the cloud primary automatically. Do NOT
-create a local sqlite db. Research DATA needs no git commit (it's in Turso); commit
-and push only CODE changes (new tools/scripts) to GitHub.
+The database is Turso (libSQL) — db.py auto-detects it from TURSO_* env vars; do NOT
+create a local sqlite db.
+
+Research is document-centric. Read RESEARCH_DOCS.md once for the standard. All research
+narrative lives in markdown documents under research/ (concepts/, theses/, desk/,
+graveyard/) — these are the source of truth and MUST be committed and pushed to GitHub.
+Start every document from research/templates/. After creating or moving any document,
+run `python3 research_docs.py reindex` (rebuilds the Turso index from front-matter and
+validates folder<->status). The database holds only the derived index plus execution/
+queue/journal tables — never put a research conclusion only in the database.
 ```
 
 ### Routine A — INVESTIGATE prompt (Opus, every 2h)
 ```
 Run: python3 run.py --context
-This is your complete state — account, trades, hypotheses, knowledge, queue, journal,
+This is your complete state — account, trades, the RESEARCH PIPELINE (Concept Notes
+awaiting research, theses under research, the desk inbox), knowledge, queue, journal,
 friction, data integrity, and Steer.md (human directions). Prioritize human directions
-over your own queue. Do NOT dump full datasets (load_hypotheses/load_knowledge/load_queue);
-query individual items only when you need deep detail.
+over your own pipeline. Do NOT dump full datasets; query individual items only when you
+need deep detail.
 
-Check for scan hits first:
-  python3 -c "import db; rows=db.get_db().execute(\"SELECT id,question,priority FROM research_queue WHERE category='scan_hit' AND status='pending' ORDER BY priority DESC LIMIT 5\").fetchall(); [print(f'{r[0]}: {r[1][:120]}') for r in rows]"
-If a hit has priority >= 8, investigate the top one with the full 6-step method.
-Otherwise take the highest-priority queue item. Read API_REFERENCE.md only when you
-need a function signature.
+Pick ONE thing to investigate, in this priority order:
+1. A high-priority Concept Note awaiting research (research/concepts/). Promote it to an
+   Investment Thesis: copy research/templates/investment_thesis.md to
+   research/theses/IT-<date>-<slug>.md, link the Concept Note in front-matter.
+2. An Investment Thesis already in research/theses/ that needs more work.
+Read API_REFERENCE.md only when you need a function signature.
 
-ONE investigation per session. Tool-call budget ~120 — each call re-reads cached
-context, so long sessions are disproportionately expensive. After ~100 calls stop new
-work. When done:
-1. Update research_queue with a handoff for the next session.
+Do the full 6-step method, recording ALL of it IN the thesis document: pre-registration
+(success/kill criteria) BEFORE any data, then discovery and out-of-sample validation
+evidence tables (each figure tagged with the data_tasks.py task_id that produced it),
+risks, falsification, and a verdict. When you reach a verdict, set conviction + decided in
+front-matter and MOVE the file:
+  - VALIDATED  -> research/desk/      (this is the deliverable to the trading desk)
+  - INVALIDATED -> research/graveyard/ (write the post-mortem; record the dead end)
+You produce the report only — never set triggers, position sizes, or stops. The desk owns
+execution (RESEARCH_DOCS.md §8).
+
+ONE investigation per session. Tool-call budget ~120 — each call re-reads cached context,
+so long sessions are disproportionately expensive. After ~100 calls stop new work. When done:
+1. python3 research_docs.py reindex   (rebuild the index; fix any validation issues it prints)
 2. db.append_journal_entry(date, type, investigated, findings, surprised_by, next_step,
    public_summary="1-2 plain-English sentences for a public audience. No jargon/IDs/filenames.")
-3. Commit + push any CODE changes.
+3. git add research/ and commit + push the documents (and any code changes).
 ```
 
 ### Routine B — SCAN prompt (Haiku, daily)
 ```
 High-throughput scan session. Run 30+ quick statistical tests using data_tasks.py.
 
-Quick context: python3 run.py --context | head -80
-What's been scanned recently:
-  python3 -c "import db; rows=db.get_db().execute(\"SELECT question FROM research_queue WHERE category='scan_hit' ORDER BY rowid DESC LIMIT 10\").fetchall(); [print(r[0][:120]) for r in rows]"
+Quick context: python3 run.py --context | head -90
+What's already in the pipeline (don't duplicate): python3 research_docs.py list
 
-Pick a scan theme not done recently. Run as many tests as possible. Queue any
-canonical-passing p<0.05 hits to research_queue (category='scan_hit'). Respect the
-per-class queue guardrails in CLAUDE.md (threshold canonical retest, regime /
-structural-break suppression, etc.).
+Pick a scan theme not done recently. Run as many tests as possible. Respect the per-class
+queue guardrails in CLAUDE.md (threshold canonical retest, regime / structural-break
+suppression, etc.) — only act on canonical-passing p<0.05 hits.
 
-Tool-call budget ~60 — after ~50, stop, write the journal entry, and exit. Log a
-journal entry with session_type="scan" and a public_summary describing what you
-screened and how many hits.
+For each genuine hit, create a Concept Note: copy research/templates/concept_note.md to
+research/concepts/CN-<date>-<slug>.md and fill it (idea, proposed mechanism, testable
+prediction, the data_tasks.py task_id, priority). Do NOT open theses or run the deep method
+— that is the orchestrator's job. Skip a hit if a Concept Note or thesis already covers it.
+
+Tool-call budget ~60 — after ~50, stop. Then:
+1. python3 research_docs.py reindex   (rebuild the index; fix any validation issues)
+2. Log a journal entry with session_type="scan" and a public_summary describing what you
+   screened and how many Concept Notes you created.
+3. git add research/ and commit + push the new Concept Notes.
 ```
 
 ---

@@ -247,6 +247,14 @@ def show_context():
         dead_names = [d.get("event_type", "?") for d in dead[-20:]]  # last 20 only
         print(f"  Dead ends ({len(dead)} total): {', '.join(dead_names)}")
 
+    # Research pipeline — the document inbox (canonical research state; see RESEARCH_DOCS.md)
+    try:
+        import research_docs
+        print()
+        research_docs.summary()
+    except Exception as e:
+        print(f"\n--- RESEARCH PIPELINE: unavailable ({e}) ---")
+
     # Research queue — priorities, handoff, top pending tasks
     rq = _db.load_queue()
     handoff = rq.get("session_handoff", {})

@@ -19,8 +19,8 @@ You are the breadth engine. The orchestrator is the depth engine.
 2. **Pick a scan theme** from the rotation below (or pick one that hasn't been scanned recently)
 3. **Run 30-50 tests** using data_tasks.py commands — no manual Python, no deep analysis
 4. **Log results**: for each test, record: identifiers, p-value, effect size, significant yes/no
-5. **Queue promising findings**: any result with p<0.05 gets added to research_queue with priority 8
-6. **Journal entry**: log what you scanned and how many hits
+5. **Record promising findings as Concept Notes**: any canonical-passing p<0.05 result becomes a Concept Note in `research/concepts/` (see below)
+6. **Reindex + journal entry**: `python3 research_docs.py reindex`, then log what you scanned and how many Concept Notes you created
 
 ## Scan Themes (rotate through these)
 
@@ -101,24 +101,27 @@ If you spot an interesting pattern in the context data, run a quick screen on it
 - **Speed over depth.** Each test is seconds. Don't stop to analyze deeply.
 - **Run commands in parallel** where possible (multiple Bash calls).
 - **Record everything.** Even null results are valuable — they prevent the orchestrator from re-testing.
-- **Don't create hypotheses.** You only scan and queue. The orchestrator creates hypotheses.
+- **Don't investigate.** You scan and write Concept Notes. The orchestrator promotes them into Investment Theses.
 - **Don't modify code.** Use existing data_tasks.py commands only.
 - **Rotate themes.** Check what was scanned recently (research_queue entries) and pick a different theme.
 
-## Queuing Promising Results
+## Recording Promising Results — write a Concept Note
 
-When a test shows p<0.05 (or is otherwise noteworthy):
+When a test shows a canonical-passing p<0.05 hit (respect the per-class guardrails in
+`CLAUDE.md`), capture it as a **Concept Note** document — this is how the orchestrator picks
+up work (read `RESEARCH_DOCS.md`). Do not open theses or investigate deeply.
 
-```python
-import db
-db.init_db()
-db.add_research_task(
-    category="scan_hit",
-    question="[SCAN HIT] target=XLE factor=CL=F beta=-0.45 p=0.001 R2=0.18. Investigate for tradeable strategy.",
-    priority=8,
-    reasoning="Scanner found significant exposure. Needs full 6-step investigation by orchestrator.",
-)
-```
+1. Copy `research/templates/concept_note.md` → `research/concepts/CN-<date>-<slug>.md`.
+2. Fill it in: the idea, the proposed mechanism, the testable prediction, the `data_tasks.py`
+   `task_id` that produced the hit, and a priority (high/medium/low).
+3. Skip the hit if a Concept Note or thesis already covers it
+   (`python3 research_docs.py list`).
+4. At session end run `python3 research_docs.py reindex` and commit `research/` to git.
+
+The front-matter is what the orchestrator and dashboard read, so fill `id, title, status:
+proposed, asset_class, universe, direction, hypothesis_class, opened, author` accurately.
+For screen-based hits (e.g. an insider-cluster screen), set `universe: [screen:<name>]`
+rather than a single ticker.
 
 ## Session End
 
