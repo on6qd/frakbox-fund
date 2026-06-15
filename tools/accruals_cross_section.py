@@ -26,11 +26,14 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 import time
 import urllib.request
 
 import numpy as np
 import pandas as pd
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 UA = {"User-Agent": "frakbox-research bart.de.lepeleer@gmail.com"}
 CACHE = "/tmp/xbrl_cache"
