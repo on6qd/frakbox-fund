@@ -802,6 +802,8 @@ def canonical_retest_threshold(
     end: str | None = None,
     benchmark: str | None = "auto",
     recency_split: str = "2020-01-01",
+    min_events_pooled: int = 8,
+    min_events_recent: int = 5,
 ) -> dict:
     """
     Canonical re-test of a threshold-triggered hypothesis.
@@ -813,6 +815,13 @@ def canonical_retest_threshold(
     3. Evaluate on TWO samples: pooled (full range) + recency subset (post-split)
     4. Require both samples to pass p<0.05 AND |mean|>=1% AND sign consistency
        (same direction). This guards against regime-specific signals like XLK/XLF.
+    5. Require a minimum number of independent (cluster-buffered) events in each
+       sample (min_events_pooled / min_events_recent). Slow-moving macro levels
+       (e.g. the 2s10s curve slope T10Y2Y) cross a fixed threshold only a few
+       times per economic cycle, so a t-test on n=3-4 episodes is a false
+       positive driven by one or two regimes. The dual-sample/sign gates do not
+       catch this on their own.
+       See t10y2y_xlu_threshold_macro_regime_underpowered_dead_end_2026_06_15.
 
     Used to validate threshold-mode scan hits before queueing them.
     """
@@ -910,10 +919,22 @@ def canonical_retest_threshold(
             r_mean = recent["horizons"][r_bh]["abnormal_mean"]
             sign_agrees = (p_mean >= 0) == (r_mean >= 0)
 
-    passes = both_pass and sign_agrees
+    # Minimum independent-event floor: a statistical PASS on a handful of
+    # cluster-buffered episodes is not defensible. Slow macro levels generate
+    # false PASSes (n=3-4) that the p<0.05 / sign / recency gates do not catch.
+    n_pooled = pooled.get("n_events") or 0
+    n_recent = recent.get("n_events") or 0
+    enough_events = n_pooled >= min_events_pooled and n_recent >= min_events_recent
+
+    passes = both_pass and sign_agrees and enough_events
 
     # Failure reason
-    if not pooled.get("passes"):
+    if not enough_events:
+        fail_reason = (
+            f"insufficient_independent_events (pooled={n_pooled}<{min_events_pooled} "
+            f"or recent={n_recent}<{min_events_recent})"
+        )
+    elif not pooled.get("passes"):
         fail_reason = "pooled_sample_fails"
     elif not recent.get("passes"):
         fail_reason = "recency_subset_fails_regime_dependent"
