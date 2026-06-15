@@ -1,0 +1,6 @@
+# frakbox_fund local execution (headless / non-admin; each script self-loads .env from the repo dir). Trade loop every 2 min; scanners daily ~22:00 local.
+*/2 * * * * cd /Users/frakbox/Bots/frakbox_fund && venv/bin/python3 trade_loop.py >> logs/trade_loop.log 2>&1
+0 22 * * * cd /Users/frakbox/Bots/frakbox_fund && venv/bin/python3 tools/fiftytwo_week_low_scanner.py >> logs/scanner-52wlow.log 2>&1
+10 22 * * * cd /Users/frakbox/Bots/frakbox_fund && venv/bin/python3 tools/sp500_addition_scanner.py >> logs/scanner-sp500.log 2>&1
+20 22 * * * cd /Users/frakbox/Bots/frakbox_fund && venv/bin/python3 tools/ceo_departure_daily_scan.py >> logs/scanner-ceo.log 2>&1
+30 22 * * * cd /Users/frakbox/Bots/frakbox_fund && venv/bin/python3 tools/cluster_auto_scanner.py >> logs/scanner-cluster.log 2>&1

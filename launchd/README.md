@@ -1,5 +1,12 @@
 # launchd jobs — local execution layer
 
+> **NOTE (2026-06-13):** This Mac Mini runs headless with no Aqua GUI session
+> (`launchctl managername` → `Background`), so LaunchAgents can't be loaded
+> (`gui/$UID` → error 125, `user/$UID` → error 5) and the non-admin user can't
+> use root LaunchDaemons. **The active scheduler on this box is cron — see
+> `cron/`.** These plists are kept for any future setup that has a GUI login.
+
+
 Version-controlled launchd plists for the **local** side of the system (the
 research sessions run in the cloud — see `CLOUD_ROUTINE.md`). Keeping them in the
 repo (vs. only in `~/Library/LaunchAgents`) means the setup survives renames and
