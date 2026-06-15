@@ -1,0 +1,6 @@
+# Local trade-loop dependencies — broker execution only.
+# Installs the core stack plus the modern Alpaca SDK (alpaca-py). Used on the
+# Mac Mini for trade_loop.py / trader.py. The cloud research routines do NOT
+# install this — they never place trades or read the broker.
+-r requirements.txt
+alpaca-py==0.43.4

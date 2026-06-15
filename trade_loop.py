@@ -248,8 +248,8 @@ def execute_pending_triggers():
     # Take the max to prevent silent capacity overflow
     alpaca_positions = []
     try:
-        from trader import get_api
-        alpaca_positions = list(get_api().list_positions())
+        from trader import get_positions
+        alpaca_positions = list(get_positions())
         alpaca_count = len(alpaca_positions)
     except Exception:
         alpaca_count = 0
@@ -373,8 +373,8 @@ def execute_pending_triggers():
         # duplicate orders (bug found 2026-04-14: SPY trade doubled to $10K
         # because both activate_vix_spy_trade.py and trade_loop placed orders).
         try:
-            api = get_api()
-            existing_positions = {p.symbol: p for p in api.list_positions()}
+            from trader import get_positions
+            existing_positions = {p.symbol: p for p in get_positions()}
             if symbol in existing_positions:
                 pos = existing_positions[symbol]
                 actions.append({
@@ -466,7 +466,7 @@ def execute_pending_triggers():
 
 def reconcile_positions():
     """Check that Alpaca positions match hypothesis state. Returns warnings."""
-    from trader import get_api
+    from trader import get_positions
 
     hypotheses = _load_hypotheses()
     active_symbols = {
@@ -476,8 +476,7 @@ def reconcile_positions():
 
     warnings = []
     try:
-        api = get_api()
-        positions = {p.symbol: p for p in api.list_positions()}
+        positions = {p.symbol: p for p in get_positions()}
     except Exception as e:
         return [f"Could not connect to Alpaca: {e}"]
 

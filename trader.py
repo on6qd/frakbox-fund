@@ -15,7 +15,6 @@ import os
 import sys
 from datetime import datetime, timedelta
 
-import alpaca_trade_api as tradeapi
 import db as _db
 from config import (
     ALPACA_API_KEY, ALPACA_SECRET_KEY, ALPACA_BASE_URL,
@@ -23,16 +22,65 @@ from config import (
     MAX_PORTFOLIO_DRAWDOWN_PCT, require_alpaca,
 )
 
-def get_api():
+# Broker = Alpaca via the modern alpaca-py SDK. Imports are deferred into the
+# client builders so this module loads even where alpaca-py isn't installed
+# (e.g. cloud research routines, which never touch the broker).
+_PAPER = "paper" in (ALPACA_BASE_URL or "")
+_clients = {}
+
+
+def _trading():
+    """Lazily build & cache the alpaca-py TradingClient."""
     require_alpaca()
-    return tradeapi.REST(ALPACA_API_KEY, ALPACA_SECRET_KEY, ALPACA_BASE_URL, api_version="v2")
+    if "trading" not in _clients:
+        from alpaca.trading.client import TradingClient
+        _clients["trading"] = TradingClient(ALPACA_API_KEY, ALPACA_SECRET_KEY, paper=_PAPER)
+    return _clients["trading"]
+
+
+def _data():
+    """Lazily build & cache the alpaca-py market-data client."""
+    require_alpaca()
+    if "data" not in _clients:
+        from alpaca.data.historical import StockHistoricalDataClient
+        _clients["data"] = StockHistoricalDataClient(ALPACA_API_KEY, ALPACA_SECRET_KEY)
+    return _clients["data"]
+
+
+def get_api():
+    """The raw alpaca-py TradingClient (native methods: get_all_positions(), submit_order(), ...)."""
+    return _trading()
+
+
+def get_positions():
+    """All open positions as alpaca-py Position objects."""
+    return _trading().get_all_positions()
+
+
+def get_account():
+    """The alpaca-py Account object."""
+    return _trading().get_account()
+
+
+def list_recent_orders(status="closed", limit=100):
+    """Recent orders as alpaca-py Order objects."""
+    from alpaca.trading.requests import GetOrdersRequest
+    from alpaca.trading.enums import QueryOrderStatus
+    st = {"closed": QueryOrderStatus.CLOSED, "open": QueryOrderStatus.OPEN,
+          "all": QueryOrderStatus.ALL}.get(status, QueryOrderStatus.CLOSED)
+    return _trading().get_orders(GetOrdersRequest(status=st, limit=limit))
+
+
+def get_portfolio_history(period="all", timeframe="1D"):
+    """Portfolio history object (has .timestamp and .equity lists)."""
+    from alpaca.trading.requests import GetPortfolioHistoryRequest
+    return _trading().get_portfolio_history(GetPortfolioHistoryRequest(period=period, timeframe=timeframe))
 
 
 def get_account_summary():
     """Get current account state."""
-    api = get_api()
-    account = api.get_account()
-    positions = api.list_positions()
+    account = get_account()
+    positions = get_positions()
 
     pos_list = []
     for p in positions:
@@ -74,14 +122,13 @@ def place_experiment(symbol, direction, notional_amount, extended_hours=False):
     if not symbol or symbol == "TBD":
         return {"success": False, "error": f"Cannot trade symbol '{symbol}' — resolve to a real ticker first"}
 
-    api = get_api()
     side = "buy" if direction == "long" else "sell"
 
     # Duplicate position guard: refuse to open a second position in the same symbol.
     # Bug found 2026-04-14: SPY VIX>30 trade was doubled ($10K instead of $5K)
     # because both activate_vix_spy_trade.py and trade_loop.py placed orders.
     try:
-        existing = {p.symbol: p for p in api.list_positions()}
+        existing = {p.symbol: p for p in get_positions()}
         if symbol in existing and direction == "long":
             pos = existing[symbol]
             return {
@@ -94,7 +141,7 @@ def place_experiment(symbol, direction, notional_amount, extended_hours=False):
 
     # Validate position size against portfolio limits
     try:
-        account = api.get_account()
+        account = get_account()
         portfolio_value = float(account.portfolio_value)
         max_notional = portfolio_value * MAX_POSITION_PCT
         if notional_amount > max_notional:
@@ -106,58 +153,42 @@ def place_experiment(symbol, direction, notional_amount, extended_hours=False):
     except Exception as e:
         return {"success": False, "error": f"Could not validate position size: {e}"}
 
-    try:
-        quote = api.get_latest_trade(symbol)
-        price = float(quote.price)
-    except Exception as e:
-        return {"success": False, "error": f"Could not get price: {e}"}
+    price = get_current_price(symbol)
+    if price is None:
+        return {"success": False, "error": f"Could not get price for {symbol}"}
 
     try:
-        # Extended-hours orders must use limit orders with time_in_force="day".
-        # Regular-hours orders use market orders (or notional for longs).
+        from alpaca.trading.requests import MarketOrderRequest, LimitOrderRequest
+        from alpaca.trading.enums import OrderSide, TimeInForce
+        side_enum = OrderSide.BUY if direction == "long" else OrderSide.SELL
+
+        # Extended-hours orders must use limit orders with time_in_force=DAY.
+        # Regular-hours orders use market orders (notional for longs, qty for shorts).
         if extended_hours:
-            # Set limit price slightly aggressive to improve fill probability:
-            #   shorts: limit slightly below last price (we sell, so lower is worse for us
-            #           but still within the spread — use -0.1% to stay near bid)
-            #   longs:  limit slightly above last price (+0.1% to stay near ask)
-            if direction == "short":
-                limit_price = round(price * 0.999, 2)
-            else:
-                limit_price = round(price * 1.001, 2)
-
+            # Limit price slightly aggressive to improve fill probability:
+            #   shorts: -0.1% (stay near bid); longs: +0.1% (stay near ask)
+            limit_price = round(price * (0.999 if direction == "short" else 1.001), 2)
             qty = int(notional_amount / price)
             if qty < 1:
                 return {"success": False, "error": f"Notional ${notional_amount} too small for {symbol} at ${price}"}
-
-            order_kwargs = dict(
-                symbol=symbol,
-                side=side,
-                type="limit",
-                time_in_force="day",
-                limit_price=limit_price,
-                qty=qty,
-                extended_hours=True,
+            req = LimitOrderRequest(
+                symbol=symbol, qty=qty, side=side_enum,
+                time_in_force=TimeInForce.DAY, limit_price=limit_price, extended_hours=True,
             )
             print(f"[EXTENDED HOURS] Placing {side.upper()} limit order: {symbol} x{qty} @ ${limit_price:.2f} "
                   f"(last trade ${price:.2f})")
         else:
             # Alpaca only supports notional for buy-side market orders.
             # For short sells, compute qty from notional amount.
-            order_kwargs = dict(
-                symbol=symbol,
-                side=side,
-                type="market",
-                time_in_force="day",
-            )
             if direction == "short":
                 qty = int(notional_amount / price)
                 if qty < 1:
                     return {"success": False, "error": f"Notional ${notional_amount} too small for {symbol} at ${price}"}
-                order_kwargs["qty"] = qty
+                req = MarketOrderRequest(symbol=symbol, qty=qty, side=side_enum, time_in_force=TimeInForce.DAY)
             else:
-                order_kwargs["notional"] = round(notional_amount, 2)
+                req = MarketOrderRequest(symbol=symbol, notional=round(notional_amount, 2), side=side_enum, time_in_force=TimeInForce.DAY)
 
-        order = api.submit_order(**order_kwargs)
+        order = _trading().submit_order(order_data=req)
         result = {
             "success": True,
             "order_id": order.id,
@@ -177,20 +208,19 @@ def place_experiment(symbol, direction, notional_amount, extended_hours=False):
 
 def close_position(symbol):
     """Close an entire position in a symbol."""
-    api = get_api()
     try:
-        api.close_position(symbol)
+        _trading().close_position(symbol)
         return {"success": True, "symbol": symbol}
     except Exception as e:
         return {"success": False, "error": str(e)}
 
 
 def get_current_price(symbol):
-    """Get the current price for a symbol."""
-    api = get_api()
+    """Get the current price for a symbol (latest trade)."""
+    from alpaca.data.requests import StockLatestTradeRequest
     try:
-        quote = api.get_latest_trade(symbol)
-        return float(quote.price)
+        resp = _data().get_stock_latest_trade(StockLatestTradeRequest(symbol_or_symbols=symbol))
+        return float(resp[symbol].price)
     except Exception:
         return None
 
@@ -221,9 +251,8 @@ def check_stop_losses():
         return []
 
     try:
-        api = get_api()
-        positions = {p.symbol: p for p in api.list_positions()}
-        account = api.get_account()
+        positions = {p.symbol: p for p in get_positions()}
+        account = get_account()
         current_equity = float(account.equity)
     except Exception as e:
         return [{"action": "error", "message": f"Could not connect to Alpaca: {e}"}]
@@ -382,8 +411,7 @@ def check_stop_losses():
 def check_portfolio_drawdown():
     """Check if portfolio drawdown exceeds the safety limit. Returns True if safe to trade."""
     try:
-        api = get_api()
-        account = api.get_account()
+        account = get_account()
         current_equity = float(account.equity)
         peak = _update_peak_equity(current_equity)
         drawdown = ((peak - current_equity) / peak) * 100 if peak > 0 else 0

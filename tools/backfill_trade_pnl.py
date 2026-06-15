@@ -12,10 +12,9 @@ import trader
 
 def backfill():
     db.init_db()
-    api = trader.get_api()
 
     # Get all closed orders
-    orders = api.list_orders(status='closed', limit=100)
+    orders = trader.list_recent_orders(status='closed', limit=100)
 
     # Build a map of fills: symbol -> list of (date, side, qty, avg_price)
     fills = {}

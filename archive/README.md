@@ -13,8 +13,11 @@ export, all in one process). They were archived 2026-06-13 as part of the migrat
 | `start.sh` / `stop.sh` | launch/kill the daemon (with pgrep guard + nohup) |
 | `check.sh` / `tail.sh` | status check / log tail helpers |
 
-**Dangling references still in active code (to resolve in #14, daemon retirement):**
-- `health_check.py` — `pgrep`s for `researcher.sh` and restarts via `start.sh`; this daemon-monitoring model is obsolete once the cloud routine + launchd jobs replace the daemon.
-- `should_run.py` — was called by `researcher.sh` to gate whether a session has work; may be repurposed by the cloud routine.
+## Also archived in #14 (2026-06-13)
 
-Kept (not deleted) for reference until the launchd/routine setup is finalized.
+- `health_check.py` — monitored the `researcher.sh` daemon (pgrep + restart via `start.sh`). Obsolete: the daemon is gone, the launchd trade loop runs stop-losses every 120s, and cloud routines are Anthropic-managed.
+- `should_run.py` — was called only by `researcher.sh` to gate session work. Orphaned.
+- `tools/` — 38 one-off trade runbooks (`activate_<ticker>`, `close_<ticker>`, `monday_*`, `complete_syk_april3`, `april2_liberation_day_runbook`, etc.). Each executed one specific past trade and reached through the old `alpaca-trade-api` client. Archived during the migration to the modern `alpaca-py` SDK; the live trade path (`trader.py`, `trade_loop.py`, `dashboard/export.py`) was migrated in place. `tools/_activator_template.py` was kept + migrated as the template for future activations.
+
+The local execution layer is now version-controlled launchd plists in `launchd/`
+(trade loop + scanners); research runs as cloud routines (see `CLOUD_ROUTINE.md`).

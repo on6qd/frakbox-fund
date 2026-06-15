@@ -92,8 +92,7 @@ def check_capacity() -> int:
     hyps = db.load_hypotheses()
     hyp_count = sum(1 for h in hyps if h.get('status') == 'active')
     try:
-        api = trader.get_api()
-        alpaca_count = len(api.list_positions())
+        alpaca_count = len(trader.get_positions())
     except Exception:
         alpaca_count = 0
     if alpaca_count > hyp_count:

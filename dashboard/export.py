@@ -544,8 +544,7 @@ def backfill_nav():
     """One-time: backfill NAV history from Alpaca portfolio history API."""
     try:
         import trader
-        api = trader.get_api()
-        history = api.get_portfolio_history(period="all", timeframe="1D")
+        history = trader.get_portfolio_history(period="all", timeframe="1D")
         if history and history.equity:
             for ts, equity in zip(history.timestamp, history.equity):
                 if equity is None:

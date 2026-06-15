@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.frakbox.scanner-ceo</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/frakbox/Bots/frakbox_fund/venv/bin/python3</string>
+        <string>/Users/frakbox/Bots/frakbox_fund/tools/ceo_departure_daily_scan.py</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/Users/frakbox/Bots/frakbox_fund</string>
+    <!-- Daily at 22:20 LOCAL time. Reads .env for Turso/data creds. Adjust as desired. -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key><integer>22</integer>
+        <key>Minute</key><integer>20</integer>
+    </dict>
+    <key>RunAtLoad</key>
+    <false/>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key><string>/usr/local/bin:/usr/bin:/bin:/Users/frakbox/Bots/frakbox_fund/venv/bin</string>
+        <key>HOME</key><string>/Users/frakbox</string>
+    </dict>
+    <key>StandardOutPath</key><string>/Users/frakbox/Bots/frakbox_fund/logs/com.frakbox.scanner-ceo.log</string>
+    <key>StandardErrorPath</key><string>/Users/frakbox/Bots/frakbox_fund/logs/com.frakbox.scanner-ceo.err.log</string>
+</dict>
+</plist>

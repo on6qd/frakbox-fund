@@ -1,4 +1,7 @@
-alpaca-trade-api==3.2.0
+# Core dependencies — research, data, and storage.
+# No broker SDK here: the cloud research routines never touch Alpaca, so this
+# installs cleanly with no dependency conflicts. For the local trade loop, use
+# requirements-trade.txt (which layers alpaca-py on top of this).
 beautifulsoup4==4.14.3
 numpy==2.4.3
 pandas==3.0.1
