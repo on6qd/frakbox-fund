@@ -118,6 +118,118 @@ def is_known_dead_end(signal_key=None, pair=None, tickers=None):
     return False, ""
 
 
+# ---------------------------------------------------------------------------
+# Rule-based systematic lead-lag dead-end classifier
+# ---------------------------------------------------------------------------
+# Ticker co-occurrence (is_known_dead_end) only fires when a PRIOR record names
+# the exact pair. But Granger lead-lag scan hits are a documented SYSTEMATIC
+# dead end by STRUCTURE, not by specific pair. The 2026-06-16 lead-lag scan
+# re-queued 33 hits, of which co-occurrence caught only 13 — the other 20 were
+# the same regime-flip / contemporaneous-beta / non-synchronous-trading
+# artifacts, just with pairs no prior record happened to mention. This
+# classifier encodes the structural rules so the WHOLE FAMILY auto-suppresses.
+#
+# Backing knowledge:
+#   dgs10_granger_lead_lag_systematic_dead_end (rates/macro -> sector: 2022 sign-flip)
+#   commodity_sector_granger_leadlag_systematic_dead_end_2026_04_20
+#   leadlag_same_index_or_same_sector_auto_suppress_rule_2026_04_22
+#   factor_exposure_contemporaneous_not_tradeable_rule_2026_06_09
+
+# Macro / rates / FX drivers: contemporaneous beta with regime-dependent sign.
+_RATE_FX_DRIVERS = {
+    # rate / bond proxies
+    "TLT", "IEF", "SHY", "IEI", "TLH", "GOVT", "BIL", "AGG", "BND", "LQD",
+    "HYG", "JNK", "TIP", "MUB", "EMB",
+    # dollar / FX ETFs
+    "UUP", "UDN", "FXE", "FXB", "FXY", "FXA", "FXC", "FXF", "CYB", "DXY",
+}
+
+_COMMODITY = {
+    # futures
+    "CL=F", "BZ=F", "HG=F", "GC=F", "SI=F", "NG=F", "PA=F", "PL=F",
+    "ZS=F", "ZW=F", "ZC=F", "ZL=F", "ZM=F", "KC=F", "CT=F", "SB=F", "CC=F",
+    # commodity / miner ETFs
+    "GLD", "SLV", "GDX", "GDXJ", "USO", "UNG", "DBA", "DBC", "DBO", "CPER",
+    "PPLT", "PALL", "SIL", "URA", "WEAT", "CORN", "SOYB", "UGA",
+}
+
+_SECTOR_ETF = {
+    "XLF", "XLE", "XLI", "XLU", "XLP", "XLY", "XLV", "XLK", "XLB", "XLRE",
+    "XLC", "SMH", "SOXX", "XME", "KRE", "KBE", "IBB", "XBI", "MOO", "ITB",
+    "XHB", "XRT", "OIH", "XOP", "VNQ", "IYR",
+}
+
+_BROAD_INDEX = {
+    "SPY", "IWM", "QQQ", "DIA", "RSP", "VTI", "VOO", "IVV", "MDY", "IJH",
+    "IJR", "OEF", "ONEQ", "VEU", "ACWI",
+}
+
+# Single-country / regional equity ETFs — Granger lead-lag across these is a
+# non-synchronous (different-timezone) trading artifact, not a tradeable edge.
+_INTL_EQUITY = {
+    "VGK", "EEM", "EFA", "VEA", "VWO", "EZU", "FXI", "MCHI", "INDA", "EWUK",
+    "EWJ", "EWG", "EWU", "EWZ", "EWA", "EWC", "EWH", "EWW", "EWT", "EWY",
+    "EWP", "EWI", "EWQ", "EWL", "EWD", "EWN", "EWS", "EWM", "EWK", "EZA",
+    "EIDO", "THD", "TUR", "EPOL", "EPU", "ECH", "GREK", "EWO",
+}
+
+
+def _is_macro_fred(sym):
+    s = (sym or "").upper()
+    return s.startswith("FRED:") or s.startswith("FF:")
+
+
+def is_leadlag_systematic_dead_end(driver, target):
+    """Rule-based check: is a Granger lead-lag (driver -> target) a member of a
+    documented SYSTEMATIC dead-end family? Returns (bool, reason).
+
+    These families have been exhaustively shown to produce Granger significance
+    in-sample that vanishes OOS and never crosses the 1% P&L magnitude floor,
+    because the relationship is a contemporaneous beta (priced in real time)
+    whose sign is regime-dependent, or a non-synchronous-trading artifact.
+    """
+    d = (driver or "").upper().strip()
+    t = (target or "").upper().strip()
+    if not d or not t:
+        return False, ""
+
+    # 1. Macro / rates / FX driver -> any asset: contemporaneous-beta regime flip
+    if _is_macro_fred(d) or d in _RATE_FX_DRIVERS:
+        return True, (
+            f"macro/rates/FX driver {d} -> {t} is a SYSTEMATIC lead-lag dead end "
+            "(contemporaneous beta with regime-dependent sign; vanishes OOS). "
+            "See dgs10_granger_lead_lag_systematic_dead_end."
+        )
+
+    # 2. Commodity on either leg: exposure artifact amplified by vol serial corr
+    if d in _COMMODITY or t in _COMMODITY:
+        return True, (
+            f"commodity leg in {d} -> {t} is a SYSTEMATIC lead-lag dead end "
+            "(contemporaneous exposure + volatility serial correlation; P&L "
+            "never crosses 1%). See "
+            "commodity_sector_granger_leadlag_systematic_dead_end_2026_04_20."
+        )
+
+    # 3. Sector-rotation (both sector ETFs) or broad-index co-movement
+    if (d in _SECTOR_ETF and t in _SECTOR_ETF) or (
+        d in _BROAD_INDEX and t in _BROAD_INDEX
+    ):
+        return True, (
+            f"same-class index/sector pair {d} -> {t} auto-suppressed "
+            "(shared-factor risk-on/risk-off co-movement artifact). See "
+            "leadlag_same_index_or_same_sector_auto_suppress_rule_2026_04_22."
+        )
+
+    # 4. International single-country/regional equity pair: non-synchronous trading
+    if d in _INTL_EQUITY and t in _INTL_EQUITY:
+        return True, (
+            f"international equity pair {d} -> {t} is a non-synchronous-trading "
+            "(timezone overlap) artifact, not a tradeable lead-lag."
+        )
+
+    return False, ""
+
+
 def _cli():
     """CLI for ad-hoc checks:
         python3 tools/scan_hit_dead_end_check.py --pair BA RTX
@@ -130,7 +242,18 @@ def _cli():
     p.add_argument("--pair", nargs=2, metavar=("A", "B"))
     p.add_argument("--tickers", nargs="+")
     p.add_argument("--signal-key", default=None)
+    p.add_argument(
+        "--leadlag",
+        nargs=2,
+        metavar=("DRIVER", "TARGET"),
+        help="check the rule-based systematic lead-lag classifier",
+    )
     args = p.parse_args()
+
+    if args.leadlag:
+        hit, reason = is_leadlag_systematic_dead_end(*args.leadlag)
+        print(json.dumps({"is_dead_end": hit, "reason": reason}, indent=2))
+        return
 
     db.init_db()
     hit, reason = is_known_dead_end(
