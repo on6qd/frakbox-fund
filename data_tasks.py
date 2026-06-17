@@ -965,6 +965,128 @@ def _check_same_index_or_sector_leadlag_artifact(factor, target):
     return None
 
 
+# ---- Systematic lead-lag family auto-suppression (2026-06-17) ----
+# Per leadlag_systematic_batch_closure_2026_06_16: ALL lead-lag Granger scan
+# hits fall into four systematic dead-end families. The same-index/same-sector
+# check above covers SPDR / sub-industry / single-stock chains (Family 3 subset),
+# but the 2026-06-17 scan re-queued 9 hits from TWO families it did NOT cover:
+#   - Family 4: international single-country/regional equity ETFs as the LEAD leg
+#       (EWA->IWM, EWZ->IWM, EWZ->RSP). These trade non-synchronously with the
+#       US session (their underlying markets closed ~15h earlier), so any
+#       "lead" is a stale-NAV / non-synchronous-trading artifact, not edge.
+#   - Family 3 (same asset class, non-SPDR): bond<->bond (BSV->BND),
+#       preferred<->preferred (PSP->PSK), broad-index<->broad-index
+#       (SCHB->SCHA), style/factor<->style/factor (VIOV->VTV),
+#       dividend<->dividend (HDV->SCHD), and equity sector/thematic<->sector
+#       (ICLN->XLK). All show lag-0 corr 0.5-0.94 with tradeable spread
+#       <0.5% and sign-inconsistent IS/OOS (verified 2026-06-17).
+
+# International single-country / regional equity ETFs (non-exhaustive). A
+# lead-lag where the LEAD leg is one of these is a non-synchronous artifact.
+_INTL_EQUITY_ETFS = {
+    # single-country (iShares MSCI)
+    "EWA", "EWC", "EWG", "EWH", "EWI", "EWJ", "EWK", "EWL", "EWM", "EWN",
+    "EWO", "EWP", "EWQ", "EWS", "EWD", "EWU", "EWW", "EWY", "EWT", "EWZ",
+    "EZA", "EIDO", "EPHE", "THD", "INDA", "EPOL", "EPU", "ECH", "GXG",
+    "TUR", "GREK", "EIS", "EWZS", "EWUS", "ENZL", "NORW",
+    # China / broad regional
+    "FXI", "MCHI", "ASHR", "KWEB", "EWH",
+    # regional / developed / EM aggregates
+    "VGK", "EZU", "IEUR", "IEV", "FEZ", "EFA", "IEFA", "VEA", "SCZ",
+    "EEM", "VWO", "IEMG", "EMXC", "ILF", "AAXJ", "EWX", "FM", "EPP",
+}
+
+# Same-asset-class buckets. A lead-lag where BOTH legs sit in one bucket is a
+# shared-factor co-movement artifact (Family 3), not a tradeable lead-lag.
+_ASSET_CLASS_BUCKETS = {
+    "us_broad_equity": {
+        "SPY", "VOO", "IVV", "VTI", "ITOT", "SCHB", "SCHX", "SCHA", "SCHM",
+        "IWM", "IWB", "IWV", "IWR", "VB", "VO", "VV", "MGC", "RSP", "MDY",
+        "QQQ", "QQQM", "DIA", "VTV", "VUG", "IWD", "IWF", "VIOV", "VIOO",
+        "IJR", "IJH", "VBR", "VBK", "VOE", "VOT", "MGK", "MGV", "SPLG",
+    },
+    "us_bonds": {
+        "BND", "AGG", "BSV", "BIV", "BLV", "SCHZ", "SPAB", "GOVT", "IEF",
+        "SHY", "TLT", "TLH", "IEI", "SCHO", "SCHR", "SPTL", "SPTS", "VGSH",
+        "VGIT", "VGLT", "VCSH", "VCIT", "VCLT", "LQD", "VTC", "MBB", "VMBS",
+    },
+    "preferred": {"PFF", "PGX", "PSK", "PSP", "PFFD", "FPE", "PFFA", "PGF"},
+    "high_yield_credit": {"HYG", "JNK", "USHY", "SHYG", "HYLB", "ANGL", "FALN"},
+    "us_dividend": {
+        "SCHD", "VYM", "HDV", "DVY", "VIG", "NOBL", "SDY", "DGRO", "SPYD",
+        "FVD", "DGRW", "RDVY",
+    },
+    "gold": {"GLD", "IAU", "GLDM", "SGOL", "BAR"},
+    "equity_sector_thematic": {
+        "XLF", "XLK", "XLE", "XLU", "XLV", "XLI", "XLP", "XLY", "XLB",
+        "XLRE", "XLC", "ICLN", "TAN", "PBW", "QCLN", "FAN", "LIT", "REMX",
+        "SMH", "SOXX", "IGV", "HACK", "XBI", "IBB", "KRE", "KBE", "ARKK",
+        "ARKG", "ARKW", "FINX", "SKYY", "CIBR", "BUG", "ROBO", "BOTZ",
+        "PAVE", "JETS", "XHB", "ITB", "XRT", "XME", "GDX", "GDXJ", "OIH",
+        "XOP", "VNQ", "IYR", "SCHH", "REM",
+    },
+}
+
+
+def _asset_class_of(ticker):
+    """Return the asset-class bucket name for a ticker, or None."""
+    u = (ticker or "").upper()
+    for bucket, members in _ASSET_CLASS_BUCKETS.items():
+        if u in members:
+            return bucket
+    return None
+
+
+def _check_systematic_leadlag_family_artifact(factor, target):
+    """Auto-suppress lead-lag tests belonging to the international (Family 4) or
+    same-asset-class (Family 3, non-SPDR) systematic dead-end families.
+
+    Per leadlag_systematic_batch_closure_2026_06_16 and the 2026-06-17 extension.
+    Returns a suppression dict, or None if the rule doesn't apply.
+    """
+    f = (factor or "").upper()
+    t = (target or "").upper()
+    if not f or not t or f == t:
+        return None
+
+    def _make(reason_detail, criterion):
+        return {
+            "check": "systematic_leadlag_family_artifact",
+            "rule": "leadlag_systematic_batch_closure_2026_06_16",
+            "suppressed": True,
+            "criterion": criterion,
+            "reason": (
+                f"{factor} -> {target} lead-lag is auto-suppressed per the "
+                f"2026-06-17 systematic-family rule. {reason_detail} Granger "
+                "significance on these pairs reflects non-synchronous trading "
+                "or shared-factor contemporaneous co-movement (lag-0 corr "
+                "0.5-0.94), not true lead-lag; tradeable directional spread is "
+                "<0.5% and sign-inconsistent IS/OOS. DO NOT queue as scan hit."
+            ),
+        }
+
+    # Family 4: international single-country / regional equity ETF as the LEAD.
+    if f in _INTL_EQUITY_ETFS:
+        return _make(
+            f"{f} is an international single-country/regional equity ETF whose "
+            "underlying market closes ~15h before the US session, so a 'lead' "
+            "is a stale-NAV / non-synchronous-trading artifact.",
+            "intl_equity_etf_lead_non_synchronous",
+        )
+
+    # Family 3 (non-SPDR): both legs in the same asset-class bucket.
+    fb = _asset_class_of(f)
+    tb = _asset_class_of(t)
+    if fb is not None and fb == tb:
+        return _make(
+            f"{f} and {t} are both in the '{fb}' asset-class bucket and share "
+            "the same dominant factor (shared-factor co-movement artifact).",
+            f"same_asset_class_{fb}",
+        )
+
+    return None
+
+
 def cmd_regression(args):
     """Run exposure, lead-lag, or structural break regression test."""
     from tools.timeseries import get_returns, get_aligned_returns
@@ -1022,6 +1144,9 @@ def cmd_regression(args):
         if artifact is None:
             # Fall through to same-index / same-sector mechanical-inclusion check.
             artifact = _check_same_index_or_sector_leadlag_artifact(args.factor, args.target)
+        if artifact is None:
+            # Fall through to systematic family check (intl ETF lead / same asset class).
+            artifact = _check_systematic_leadlag_family_artifact(args.factor, args.target)
         if artifact is not None:
             result["scan_artifact_check"] = artifact
             result["scan_artifact_suppressed"] = artifact.get("suppressed", False)

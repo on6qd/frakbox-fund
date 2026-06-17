@@ -118,11 +118,47 @@ def is_known_dead_end(signal_key=None, pair=None, tickers=None):
     return False, ""
 
 
+def is_systematic_leadlag_dead_end(lead, lag):
+    """Categorical pre-queue check for lead-lag (Granger) scan hits.
+
+    Unlike `is_known_dead_end` (which matches explicit tickers in dead-end
+    records), this catches the four SYSTEMATIC lead-lag families from
+    leadlag_systematic_batch_closure_2026_06_16 BEFORE any individual pair has
+    been recorded — so a fresh scan stops re-queuing them. Delegates to the
+    canonical suppression cascade in data_tasks.py.
+
+    Args:
+        lead: lead-leg ticker / series id (the Granger "cause").
+        lag:  lag-leg ticker / series id (the Granger "effect").
+
+    Returns:
+        (is_dead_end: bool, reason: str)
+    """
+    try:
+        import data_tasks as _dt
+    except Exception as e:  # pragma: no cover - defensive
+        return False, f"could not import data_tasks: {e}"
+
+    for fn in (
+        getattr(_dt, "_check_dgs_leadlag_artifact", None),
+        getattr(_dt, "_check_commodity_sector_leadlag_artifact", None),
+        getattr(_dt, "_check_same_index_or_sector_leadlag_artifact", None),
+        getattr(_dt, "_check_systematic_leadlag_family_artifact", None),
+    ):
+        if fn is None:
+            continue
+        art = fn(lead, lag)
+        if art and art.get("suppressed"):
+            return True, f"{art.get('rule')} [{art.get('criterion', art.get('check'))}]: {art.get('reason')}"
+    return False, ""
+
+
 def _cli():
     """CLI for ad-hoc checks:
         python3 tools/scan_hit_dead_end_check.py --pair BA RTX
         python3 tools/scan_hit_dead_end_check.py --tickers XLU TLT
         python3 tools/scan_hit_dead_end_check.py --signal-key vix30_xlk_threshold
+        python3 tools/scan_hit_dead_end_check.py --leadlag EWA IWM
     """
     import argparse
 
@@ -130,12 +166,16 @@ def _cli():
     p.add_argument("--pair", nargs=2, metavar=("A", "B"))
     p.add_argument("--tickers", nargs="+")
     p.add_argument("--signal-key", default=None)
+    p.add_argument("--leadlag", nargs=2, metavar=("LEAD", "LAG"))
     args = p.parse_args()
 
     db.init_db()
-    hit, reason = is_known_dead_end(
-        signal_key=args.signal_key, pair=args.pair, tickers=args.tickers
-    )
+    if args.leadlag:
+        hit, reason = is_systematic_leadlag_dead_end(*args.leadlag)
+    else:
+        hit, reason = is_known_dead_end(
+            signal_key=args.signal_key, pair=args.pair, tickers=args.tickers
+        )
     print(json.dumps({"is_dead_end": hit, "reason": reason}, indent=2))
 
 
