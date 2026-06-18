@@ -965,6 +965,109 @@ def _check_same_index_or_sector_leadlag_artifact(factor, target):
     return None
 
 
+# ---- Generalized economic-significance gate for lead-lag scan hits ----
+# Per leadlag_same_index_or_same_sector_auto_suppress_rule_2026_04_22 and the
+# repeated friction (journal 2026-06-16/17/18): same-factor ETF pairs keep
+# slipping past the hardcoded ticker-map cascade above (QUAL->MTUM, OIL->USO,
+# IVV->VTV, ASHR->FXI, IEF->SHV, DGRO->VYM, ACWF->ACWX, CIBR->VGT, SCHE->SCHA,
+# QQQX->VUG, ...). Granger "significance" between two highly-correlated baskets
+# reflects shared-factor exposure / asynchronous trading + AR(1), not a tradeable
+# lead. This fallback operationalizes the canonical GRADUATION BAR directly on the
+# return data (no ticker map needed): a lead-lag is a real candidate ONLY if the
+# lagged-factor coefficient survives, with |beta|>=0.05 AND p<0.05 AND the same
+# sign, in BOTH the in-sample and out-of-sample periods, AFTER controlling for the
+# contemporaneous factor return and the AR(1) target term. Anything that fails is
+# the systematic shared-factor artifact -> suppress (DO NOT queue as scan hit).
+
+_LEADLAG_GRADUATION_MIN_BETA = 0.05   # canonical economic-significance floor
+_LEADLAG_GRADUATION_MAX_P = 0.05      # canonical significance threshold
+_LEADLAG_MIN_OBS_PER_SAMPLE = 60      # need enough obs in each split to judge
+
+
+def _check_leadlag_economic_significance(factor_rets, target_rets, lag, oos_start):
+    """Universal fallback gate: suppress a lead-lag scan hit unless the lagged
+    coefficient clears the canonical graduation bar (|beta|>=0.05, p<0.05,
+    consistent sign) in BOTH IS and OOS, controlling for the contemporaneous
+    factor and AR(1) target. Returns a suppression dict when it FAILS the bar,
+    or None when it graduates (genuine candidate) or there is insufficient data.
+    """
+    import numpy as np
+    import statsmodels.api as sm
+    import pandas as pd
+
+    try:
+        lag = int(lag)
+    except (TypeError, ValueError):
+        return None
+    if lag < 1:
+        return None
+
+    # Align factor and target on a common index, then split IS / OOS.
+    df = pd.concat([factor_rets.rename("f"), target_rets.rename("t")], axis=1).dropna()
+    if oos_start is not None:
+        try:
+            cut = pd.Timestamp(oos_start)
+            is_df = df[df.index < cut]
+            oos_df = df[df.index >= cut]
+        except Exception:
+            is_df, oos_df = df, df.iloc[0:0]
+    else:
+        # No explicit split: use a 70/30 chronological split.
+        n = len(df)
+        is_df, oos_df = df.iloc[: int(n * 0.7)], df.iloc[int(n * 0.7):]
+
+    def _controlled_beta(sub):
+        """Return (beta, pvalue) for the lagged factor in
+        target_t ~ const + factor_{t-lag} + factor_t + target_{t-1}."""
+        if len(sub) < (_LEADLAG_MIN_OBS_PER_SAMPLE + lag + 1):
+            return None
+        f = sub["f"].values
+        t = sub["t"].values
+        y = t[lag:]
+        x_lag = f[:-lag]                 # leading factor
+        x_con = f[lag:]                  # contemporaneous shared factor
+        x_ar = t[lag - 1:-1]            # AR(1) target
+        X = sm.add_constant(np.column_stack([x_lag, x_con, x_ar]))
+        m = sm.OLS(y, X).fit()
+        return float(m.params[1]), float(m.pvalues[1])
+
+    is_res = _controlled_beta(is_df)
+    oos_res = _controlled_beta(oos_df)
+    if is_res is None or oos_res is None:
+        # Not enough data to apply the canonical bar — leave to other checks.
+        return None
+
+    ib, ip = is_res
+    ob, op = oos_res
+    graduates = (
+        abs(ib) >= _LEADLAG_GRADUATION_MIN_BETA and ip < _LEADLAG_GRADUATION_MAX_P
+        and abs(ob) >= _LEADLAG_GRADUATION_MIN_BETA and op < _LEADLAG_GRADUATION_MAX_P
+        and np.sign(ib) == np.sign(ob)
+    )
+    if graduates:
+        return None  # genuine lead-lag candidate; do not suppress.
+
+    return {
+        "check": "leadlag_economic_significance_gate",
+        "rule": "leadlag_same_index_or_same_sector_auto_suppress_rule_2026_04_22",
+        "suppressed": True,
+        "criterion": "controlled_lagged_beta_fails_graduation_bar",
+        "is_controlled_beta": round(ib, 4),
+        "is_p": round(ip, 4),
+        "oos_controlled_beta": round(ob, 4),
+        "oos_p": round(op, 4),
+        "reason": (
+            f"Lead-lag fails the canonical graduation bar: after controlling for the "
+            f"contemporaneous factor and AR(1) target, the lagged coefficient is "
+            f"IS beta={ib:.3f} (p={ip:.3f}), OOS beta={ob:.3f} (p={op:.3f}) — not "
+            f"|beta|>=0.05 & p<0.05 with a consistent sign in BOTH samples. The "
+            f"raw Granger significance reflects shared-factor exposure / AR(1), not "
+            f"a tradeable lead. DO NOT queue as scan hit. Graduation requires a "
+            f"pre-registered regression + threshold meeting this bar."
+        ),
+    }
+
+
 def cmd_regression(args):
     """Run exposure, lead-lag, or structural break regression test."""
     from tools.timeseries import get_returns, get_aligned_returns
@@ -1022,6 +1125,13 @@ def cmd_regression(args):
         if artifact is None:
             # Fall through to same-index / same-sector mechanical-inclusion check.
             artifact = _check_same_index_or_sector_leadlag_artifact(args.factor, args.target)
+        if artifact is None:
+            # Universal fallback (no ticker map): apply the canonical graduation bar
+            # directly to the return data. Catches any same-factor ETF pair whose
+            # lagged coefficient does not survive contemporaneous + AR(1) control in
+            # BOTH IS and OOS. Per leadlag friction journal 2026-06-16/17/18.
+            artifact = _check_leadlag_economic_significance(
+                factor_rets, target_rets, result.get("effect_size"), args.oos_start)
         if artifact is not None:
             result["scan_artifact_check"] = artifact
             result["scan_artifact_suppressed"] = artifact.get("suppressed", False)
