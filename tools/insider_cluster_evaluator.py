@@ -44,6 +44,13 @@ from tools.yfinance_utils import safe_download
 
 OPTIMAL_N_RANGE = (3, 5)       # 6+ insiders actually underperform
 MIN_MARKET_CAP_M = 500         # Large-cap filter
+# Prior-drawdown boost (4c) is a micro/small/mid-cap effect that vanishes
+# (and slightly inverts) at large cap. Cap-condition the boost: clusters with
+# market cap >= this threshold get NO drawdown score. See
+# deep_drawdown_insider_outperformance_microcap_only_survivorship_inflated_rule_2026_06_20
+# and the 20-day-drawdown cap-split confirmation (2026-06-21): large >=$10B dip<=-10%
+# earns +0.45% (vs +0.87% no-dip) — no edge, vs micro +4.56% / small +4.39%.
+DRAWDOWN_BOOST_MAX_CAP_M = 10000
 CHASE_FILTER_PCT = 30          # Max % above detection price
 MAX_POSITIONS = 5              # Portfolio capacity
 HOLD_DAYS = 5                  # Optimal hold period
@@ -288,7 +295,17 @@ def evaluate_cluster(
             peak_20d = closes.iloc[-20:].max() if len(closes) >= 20 else closes.max()
             current_close = closes.iloc[-1]
             prior_drawdown_pct = round((current_close - peak_20d) / peak_20d * 100, 1)
-            if prior_drawdown_pct <= -15:
+            # Cap-condition the boost: the drawdown edge is micro/small/mid-cap only
+            # and disappears at large cap (see DRAWDOWN_BOOST_MAX_CAP_M note). For large
+            # caps we still REPORT the drawdown but add no score (do not treat a
+            # large-cap deep drawdown — e.g. FISV's -73% from 52w high — as a tailwind).
+            dd_boost_eligible = (market_cap is None) or (market_cap < DRAWDOWN_BOOST_MAX_CAP_M)
+            if not dd_boost_eligible:
+                reasons.append(
+                    f"○ Prior drawdown {prior_drawdown_pct}% — NOT scored "
+                    f"(large cap ${market_cap:.0f}M ≥ ${DRAWDOWN_BOOST_MAX_CAP_M}M: "
+                    f"drawdown boost is micro/small/mid-cap only)")
+            elif prior_drawdown_pct <= -15:
                 score += 1.5
                 reasons.append(f"✓ Prior drawdown {prior_drawdown_pct}% (deep dip — insiders buying conviction)")
             elif prior_drawdown_pct <= -10:
@@ -470,6 +487,8 @@ def evaluate_cluster(
             "current_price": current_price,
             "spy_vs_ma_pct": spy_info["pct_vs_ma"],
             "prior_drawdown_pct": prior_drawdown_pct,
+            "drawdown_boost_scored": (prior_drawdown_pct is not None) and (
+                (market_cap is None) or (market_cap < DRAWDOWN_BOOST_MAX_CAP_M)),
             "active_positions": positions,
         },
         "cluster_profile": {
