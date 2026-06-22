@@ -628,14 +628,26 @@ def check_edgar_8k(days_back: int = 3) -> tuple:
 
 
 # ---------------------------------------------------------------------------
-# Pre-announce run-up guardrail (Q2 2026 MRVL post-mortem)
+# Pre-announce run-up: INFORMATIONAL telemetry only (NOT a trade gate)
 # ---------------------------------------------------------------------------
 
-# A name that has already rallied hard INTO the announcement has front-run the
-# index-inclusion premium; the post-announce drift reverses to a fade. MRVL
-# (+27% abnormal pre-announce, Q2 2026) was the canonical casualty. SKIP any
-# addition whose 5d pre-announce abnormal (vs SPY) run-up exceeds this threshold.
-RUNUP_SKIP_THRESHOLD_PCT = 20.0
+# History of this metric: a 2026-06-11 guardrail assumed that a name which had
+# already rallied hard INTO the announcement had front-run the inclusion premium
+# and would fade, and SKIPPED any addition with >20% pre-announce 5d abnormal
+# run-up. MRVL (+31% pre-announce, Q2 2026) was tagged the canonical casualty.
+#
+# The Q2 2026 OOS REJECTED that premise (resolved 2026-06-22): MRVL did NOT fade
+# — it returned +16.6% abnormal over the 9d hold (the single biggest OOS winner),
+# while FLEX (only +3% pre-run-up) was the -4.1% miss. The pre5->post5 relation
+# is mildly POSITIVE in every sample we have (historical n=29 pearson +0.23;
+# recent n=6 pearson +0.44), the opposite sign to the fade theory. The guardrail
+# would have skipped exactly the winner, so it is removed.
+#
+# The base signal is validated as "trade ALL quarterly-rebalance additions long,
+# no cherry-picking". We still COMPUTE the run-up and surface it as a note for
+# manual review of out-of-distribution cases, but it never blocks a trigger.
+# See knowledge: sp500_index_addition_runup_guardrail_falsified_2026_06_22.
+RUNUP_NOTE_THRESHOLD_PCT = 20.0
 
 
 def pre_announce_abnormal_runup(symbol: str, announcement_date: str, lookback: int = 5):
@@ -705,18 +717,20 @@ def update_hypothesis(ticker: str, announcement_date: str, effective_date: str,
         print(f"  WARNING: expected_symbol is currently '{current_symbol}' (not TBD). "
               f"Will overwrite with '{ticker}'.")
 
-    # Run-up guardrail: a name that already front-ran the inclusion premium fades.
+    # Pre-announce run-up: informational only. The 2026-06-11 fade guardrail was
+    # falsified by the Q2 2026 OOS (MRVL +31% pre-run-up -> +16.6% post, the
+    # biggest winner). We log the run-up but NEVER skip — trade ALL quarterly
+    # additions long.
     runup, runup_status = pre_announce_abnormal_runup(ticker, announcement_date)
     if runup is not None:
-        print(f"  Pre-announce 5d abnormal run-up: {runup:+.1f}% (skip threshold "
-              f">{RUNUP_SKIP_THRESHOLD_PCT:.0f}%)")
-        if runup > RUNUP_SKIP_THRESHOLD_PCT:
-            print(f"  SKIP: {ticker} run-up {runup:+.1f}% exceeds {RUNUP_SKIP_THRESHOLD_PCT:.0f}% "
-                  f"-> inclusion premium already priced in (Q2 2026 MRVL pattern). No trigger set.")
-            return False
+        note = ""
+        if runup > RUNUP_NOTE_THRESHOLD_PCT:
+            note = (f" [out-of-distribution >{RUNUP_NOTE_THRESHOLD_PCT:.0f}%; "
+                    f"flag for manual review — NOT a skip]")
+        print(f"  Pre-announce 5d abnormal run-up: {runup:+.1f}%{note}")
     else:
-        print(f"  WARNING: could not compute pre-announce run-up ({runup_status}); "
-              f"proceeding without guardrail. Verify {ticker} manually for >20% run-up.")
+        print(f"  Note: could not compute pre-announce run-up ({runup_status}); "
+              f"proceeding (informational metric only).")
 
     print(f"  Updating hypothesis {target['id']}:")
     print(f"    expected_symbol: {current_symbol} -> {ticker}")
