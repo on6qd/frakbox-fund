@@ -1,0 +1,538 @@
+{
+ "description": "S&P 500 quarterly-rebalance additions (2020-present), EFFECTIVE-date-anchored abnormal returns vs SPY. Reproducible from Wikipedia 'Selected changes' table (market-cap adds in Mar/Jun/Sep/Dec). capture10=[eff-10,eff] front-running run-up; post5=[eff,eff+5] post-effective reversal.",
+ "source": "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies",
+ "generated_by": "tools/sp500_addition_dataset.py",
+ "n_total": 54,
+ "n_valid": 49,
+ "pearson_capture10_post5": 0.13,
+ "spearman_capture10_post5": 0.092,
+ "stats": {
+  "capture15_mean": 2.43,
+  "capture15_pos_rate": 0.653,
+  "capture10_mean": 2.06,
+  "capture10_pos_rate": 0.673,
+  "runup5_mean": 0.45,
+  "runup5_pos_rate": 0.449,
+  "post1_mean": 0.22,
+  "post1_pos_rate": 0.531,
+  "post5_mean": -0.49,
+  "post5_pos_rate": 0.429
+ },
+ "events": [
+  {
+   "symbol": "TYL",
+   "effective_date": "2020-06-22",
+   "status": "ok",
+   "capture15": -12.1,
+   "capture10": -2.08,
+   "runup5": -4.67,
+   "post1": -1.59,
+   "post5": 2.44
+  },
+  {
+   "symbol": "TDY",
+   "effective_date": "2020-06-22",
+   "status": "ok",
+   "capture15": -12.92,
+   "capture10": -10.93,
+   "runup5": -5.67,
+   "post1": -3.07,
+   "post5": -4.43
+  },
+  {
+   "symbol": "BIO",
+   "effective_date": "2020-06-22",
+   "status": "ok",
+   "capture15": -9.4,
+   "capture10": 3.46,
+   "runup5": -1.21,
+   "post1": -1.49,
+   "post5": -3.31
+  },
+  {
+   "symbol": "CTLT",
+   "effective_date": "2020-09-21",
+   "status": "fetch_err:yfinance returned no data for ['CTLT'] from 2020-08-07 to 2020-10-11."
+  },
+  {
+   "symbol": "TER",
+   "effective_date": "2020-09-21",
+   "status": "ok",
+   "capture15": -3.81,
+   "capture10": 2.03,
+   "runup5": 2.56,
+   "post1": -1.49,
+   "post5": 0.76
+  },
+  {
+   "symbol": "ETSY",
+   "effective_date": "2020-09-21",
+   "status": "ok",
+   "capture15": 3.31,
+   "capture10": 7.72,
+   "runup5": 1.51,
+   "post1": 1.86,
+   "post5": 4.41
+  },
+  {
+   "symbol": "CZR",
+   "effective_date": "2021-03-22",
+   "status": "ok",
+   "capture15": -7.05,
+   "capture10": -10.13,
+   "runup5": -10.39,
+   "post1": -3.6,
+   "post5": -7.63
+  },
+  {
+   "symbol": "GNRC",
+   "effective_date": "2021-03-22",
+   "status": "ok",
+   "capture15": -10.49,
+   "capture10": 3.23,
+   "runup5": -6.35,
+   "post1": -2.45,
+   "post5": -4.19
+  },
+  {
+   "symbol": "PENN",
+   "effective_date": "2021-03-22",
+   "status": "ok",
+   "capture15": -11.48,
+   "capture10": 0.37,
+   "runup5": -9.2,
+   "post1": -0.4,
+   "post5": -14.02
+  },
+  {
+   "symbol": "NXPI",
+   "effective_date": "2021-03-22",
+   "status": "ok",
+   "capture15": 6.21,
+   "capture10": 14.36,
+   "runup5": 10.96,
+   "post1": -3.59,
+   "post5": -3.94
+  },
+  {
+   "symbol": "BRO",
+   "effective_date": "2021-09-20",
+   "status": "ok",
+   "capture15": 0.18,
+   "capture10": -0.52,
+   "runup5": -0.73,
+   "post1": 0.61,
+   "post5": -0.24
+  },
+  {
+   "symbol": "CDAY",
+   "effective_date": "2021-09-20",
+   "status": "fetch_err:yfinance returned no data for ['CDAY'] from 2021-08-06 to 2021-10-10."
+  },
+  {
+   "symbol": "MTCH",
+   "effective_date": "2021-09-20",
+   "status": "ok",
+   "capture15": 10.71,
+   "capture10": 6.1,
+   "runup5": -3.81,
+   "post1": 0.4,
+   "post5": 6.72
+  },
+  {
+   "symbol": "SBNY",
+   "effective_date": "2021-12-20",
+   "status": "fetch_err:yfinance returned no data for ['SBNY'] from 2021-11-05 to 2022-01-09."
+  },
+  {
+   "symbol": "FDS",
+   "effective_date": "2021-12-20",
+   "status": "ok",
+   "capture15": 2.05,
+   "capture10": 2.92,
+   "runup5": 3.48,
+   "post1": -0.96,
+   "post5": -1.25
+  },
+  {
+   "symbol": "SEDG",
+   "effective_date": "2021-12-20",
+   "status": "ok",
+   "capture15": -23.86,
+   "capture10": -15.53,
+   "runup5": -4.58,
+   "post1": 7.03,
+   "post5": 3.11
+  },
+  {
+   "symbol": "ON",
+   "effective_date": "2022-06-21",
+   "status": "ok",
+   "capture15": -5.74,
+   "capture10": -12.78,
+   "runup5": -7.03,
+   "post1": -1.63,
+   "post5": 0.17
+  },
+  {
+   "symbol": "KDP",
+   "effective_date": "2022-06-21",
+   "status": "ok",
+   "capture15": 8.61,
+   "capture10": 3.73,
+   "runup5": 2.52,
+   "post1": 0.01,
+   "post5": 0.14
+  },
+  {
+   "symbol": "INVH",
+   "effective_date": "2022-09-19",
+   "status": "ok",
+   "capture15": 2.27,
+   "capture10": 1.25,
+   "runup5": -2.02,
+   "post1": -1.66,
+   "post5": -0.3
+  },
+  {
+   "symbol": "CSGP",
+   "effective_date": "2022-09-19",
+   "status": "ok",
+   "capture15": 6.23,
+   "capture10": 2.2,
+   "runup5": -5.38,
+   "post1": -0.64,
+   "post5": 2.8
+  },
+  {
+   "symbol": "FSLR",
+   "effective_date": "2022-12-19",
+   "status": "ok",
+   "capture15": -1.77,
+   "capture10": -1.74,
+   "runup5": 4.83,
+   "post1": -0.25,
+   "post5": -4.54
+  },
+  {
+   "symbol": "FICO",
+   "effective_date": "2023-03-20",
+   "status": "ok",
+   "capture15": 2.44,
+   "capture10": 0.27,
+   "runup5": -7.31,
+   "post1": 0.79,
+   "post5": 0.19
+  },
+  {
+   "symbol": "PANW",
+   "effective_date": "2023-06-20",
+   "status": "ok",
+   "capture15": 9.65,
+   "capture10": 3.79,
+   "runup5": 9.4,
+   "post1": -0.6,
+   "post5": 4.37
+  },
+  {
+   "symbol": "ABNB",
+   "effective_date": "2023-09-18",
+   "status": "ok",
+   "capture15": 12.14,
+   "capture10": 8.76,
+   "runup5": -1.97,
+   "post1": -0.28,
+   "post5": -3.33
+  },
+  {
+   "symbol": "BX",
+   "effective_date": "2023-09-18",
+   "status": "ok",
+   "capture15": 13.57,
+   "capture10": 10.78,
+   "runup5": 1.13,
+   "post1": 0.86,
+   "post5": -0.99
+  },
+  {
+   "symbol": "BLDR",
+   "effective_date": "2023-12-18",
+   "status": "ok",
+   "capture15": 12.98,
+   "capture10": 13.23,
+   "runup5": 7.63,
+   "post1": 2.24,
+   "post5": 4.54
+  },
+  {
+   "symbol": "JBL",
+   "effective_date": "2023-12-18",
+   "status": "ok",
+   "capture15": -5.11,
+   "capture10": 9.12,
+   "runup5": 9.29,
+   "post1": 0.18,
+   "post5": -2.13
+  },
+  {
+   "symbol": "UBER",
+   "effective_date": "2023-12-18",
+   "status": "ok",
+   "capture15": 5.84,
+   "capture10": 1.52,
+   "runup5": -2.14,
+   "post1": 0.02,
+   "post5": -0.37
+  },
+  {
+   "symbol": "SMCI",
+   "effective_date": "2024-03-18",
+   "status": "ok",
+   "capture15": 12.52,
+   "capture10": -7.28,
+   "runup5": -6.18,
+   "post1": -9.52,
+   "post5": 2.86
+  },
+  {
+   "symbol": "DECK",
+   "effective_date": "2024-03-18",
+   "status": "ok",
+   "capture15": 2.86,
+   "capture10": -2.33,
+   "runup5": -0.2,
+   "post1": -0.56,
+   "post5": 1.26
+  },
+  {
+   "symbol": "GDDY",
+   "effective_date": "2024-06-24",
+   "status": "ok",
+   "capture15": -4.12,
+   "capture10": -2.64,
+   "runup5": -1.08,
+   "post1": 1.62,
+   "post5": 1.75
+  },
+  {
+   "symbol": "CRWD",
+   "effective_date": "2024-06-24",
+   "status": "ok",
+   "capture15": 17.24,
+   "capture10": 6.29,
+   "runup5": -1.27,
+   "post1": 1.95,
+   "post5": 3.28
+  },
+  {
+   "symbol": "KKR",
+   "effective_date": "2024-06-24",
+   "status": "ok",
+   "capture15": 1.26,
+   "capture10": 7.71,
+   "runup5": -1.2,
+   "post1": -0.43,
+   "post5": -3.23
+  },
+  {
+   "symbol": "ERIE",
+   "effective_date": "2024-09-23",
+   "status": "ok",
+   "capture15": 4.54,
+   "capture10": 2.4,
+   "runup5": -1.41,
+   "post1": 0.93,
+   "post5": -0.43
+  },
+  {
+   "symbol": "DELL",
+   "effective_date": "2024-09-23",
+   "status": "ok",
+   "capture15": 0.38,
+   "capture10": 6.45,
+   "runup5": 1.38,
+   "post1": -0.51,
+   "post5": 0.11
+  },
+  {
+   "symbol": "PLTR",
+   "effective_date": "2024-09-23",
+   "status": "ok",
+   "capture15": 19.18,
+   "capture10": 5.11,
+   "runup5": 3.1,
+   "post1": -3.05,
+   "post5": -2.69
+  },
+  {
+   "symbol": "WDAY",
+   "effective_date": "2024-12-23",
+   "status": "ok",
+   "capture15": 6.69,
+   "capture10": -3.87,
+   "runup5": 1.6,
+   "post1": 0.26,
+   "post5": -1.33
+  },
+  {
+   "symbol": "APO",
+   "effective_date": "2024-12-23",
+   "status": "ok",
+   "capture15": 0.74,
+   "capture10": 0.83,
+   "runup5": -1.23,
+   "post1": 0.76,
+   "post5": -2.32
+  },
+  {
+   "symbol": "TKO",
+   "effective_date": "2025-03-24",
+   "status": "ok",
+   "capture15": 5.11,
+   "capture10": 5.17,
+   "runup5": 6.84,
+   "post1": 0.86,
+   "post5": 2.49
+  },
+  {
+   "symbol": "DASH",
+   "effective_date": "2025-03-24",
+   "status": "ok",
+   "capture15": 1.81,
+   "capture10": 9.16,
+   "runup5": 3.37,
+   "post1": 0.13,
+   "post5": -5.59
+  },
+  {
+   "symbol": "EXE",
+   "effective_date": "2025-03-24",
+   "status": "ok",
+   "capture15": 12.94,
+   "capture10": 8.03,
+   "runup5": 4.12,
+   "post1": 0.41,
+   "post5": 4.59
+  },
+  {
+   "symbol": "WSM",
+   "effective_date": "2025-03-24",
+   "status": "ok",
+   "capture15": -7.9,
+   "capture10": -10.77,
+   "runup5": -2.81,
+   "post1": -0.9,
+   "post5": -4.6
+  },
+  {
+   "symbol": "APP",
+   "effective_date": "2025-09-22",
+   "status": "ok",
+   "capture15": 30.79,
+   "capture10": 14.57,
+   "runup5": 10.38,
+   "post1": 1.74,
+   "post5": 11.17
+  },
+  {
+   "symbol": "HOOD",
+   "effective_date": "2025-09-22",
+   "status": "ok",
+   "capture15": 16.39,
+   "capture10": 3.43,
+   "runup5": 7.24,
+   "post1": 1.59,
+   "post5": 9.95
+  },
+  {
+   "symbol": "EME",
+   "effective_date": "2025-09-22",
+   "status": "ok",
+   "capture15": 2.11,
+   "capture10": 2.45,
+   "runup5": -0.77,
+   "post1": -1.15,
+   "post5": -1.84
+  },
+  {
+   "symbol": "FIX",
+   "effective_date": "2025-12-22",
+   "status": "ok",
+   "capture15": -2.05,
+   "capture10": -4.38,
+   "runup5": -2.93,
+   "post1": 1.08,
+   "post5": -0.72
+  },
+  {
+   "symbol": "CVNA",
+   "effective_date": "2025-12-22",
+   "status": "ok",
+   "capture15": 14.58,
+   "capture10": -3.68,
+   "runup5": -1.32,
+   "post1": 0.41,
+   "post5": -1.25
+  },
+  {
+   "symbol": "CRH",
+   "effective_date": "2025-12-22",
+   "status": "ok",
+   "capture15": 4.5,
+   "capture10": -0.72,
+   "runup5": -1.69,
+   "post1": -0.16,
+   "post5": -0.64
+  },
+  {
+   "symbol": "SATS",
+   "effective_date": "2026-03-23",
+   "status": "ok",
+   "capture15": -3.49,
+   "capture10": 2.72,
+   "runup5": 3.19,
+   "post1": 1.57,
+   "post5": 6.07
+  },
+  {
+   "symbol": "COHR",
+   "effective_date": "2026-03-23",
+   "status": "ok",
+   "capture15": -10.42,
+   "capture10": 4.19,
+   "runup5": 6.28,
+   "post1": 7.11,
+   "post5": -10.31
+  },
+  {
+   "symbol": "LITE",
+   "effective_date": "2026-03-23",
+   "status": "ok",
+   "capture15": -2.68,
+   "capture10": 16.89,
+   "runup5": 15.27,
+   "post1": 10.36,
+   "post5": -6.6
+  },
+  {
+   "symbol": "VRT",
+   "effective_date": "2026-03-23",
+   "status": "ok",
+   "capture15": 3.6,
+   "capture10": -0.02,
+   "runup5": 0.67,
+   "post1": 6.15,
+   "post5": -4.94
+  },
+  {
+   "symbol": "FLEX",
+   "effective_date": "2026-06-22",
+   "status": "window_oob"
+  },
+  {
+   "symbol": "MRVL",
+   "effective_date": "2026-06-22",
+   "status": "window_oob"
+  }
+ ]
+}
