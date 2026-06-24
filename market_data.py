@@ -13,6 +13,10 @@ import sys
 import pandas as pd
 import requests
 import yfinance as yf
+# Importing yfinance_utils installs the egress-proxy TLS compatibility patch
+# (see tools/yfinance_utils.py) so every yfinance path — including the raw
+# yf.Ticker(...).history() calls below — works through the proxy.
+import tools.yfinance_utils  # noqa: F401
 from datetime import datetime, timedelta
 from scipy.stats import ttest_1samp, wilcoxon, norm, skew as scipy_skew
 
