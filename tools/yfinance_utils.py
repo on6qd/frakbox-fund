@@ -38,7 +38,6 @@ Usage examples:
 
 from __future__ import annotations
 
-import os
 import sys
 from typing import Union
 
@@ -46,51 +45,9 @@ import pandas as pd
 import yfinance as yf
 
 
-# ---------------------------------------------------------------------------
-# Egress-proxy TLS compatibility patch
-# ---------------------------------------------------------------------------
-# In remote/cloud sessions all outbound HTTPS is tunnelled through a
-# policy-enforcing proxy that re-terminates TLS with its own CA. yfinance 1.x
-# fetches data with curl_cffi using `impersonate="chrome"`, whose TLS
-# fingerprint fails the proxy's re-termination with a BoringSSL
-# "TLS connect error: invalid library" (curl error 35). Two changes make it
-# work transparently for EVERY yfinance code path (yf.download, yf.Ticker,
-# crumb/cookie fetches):
-#   1. Force the CA bundle (curl_cffi ignores the standard env CA when
-#      impersonating).
-#   2. Swap the failing "chrome" fingerprint for "safari", which negotiates
-#      cleanly through the proxy.
-# When no proxy is configured this is a harmless no-op (safari is a valid
-# browser fingerprint and verify still points at a real CA bundle).
-
-def _install_proxy_tls_patch() -> None:
-    try:
-        import curl_cffi.requests as _cr
-    except Exception:
-        return
-    if getattr(_cr.Session, "_frakbox_proxy_patched", False):
-        return
-    ca = os.environ.get("CURL_CA_BUNDLE") or os.environ.get("SSL_CERT_FILE") \
-        or os.environ.get("REQUESTS_CA_BUNDLE")
-    # Only intervene when an egress proxy is actually in front of us.
-    proxied = bool(os.environ.get("HTTPS_PROXY") or os.environ.get("https_proxy"))
-    if not proxied:
-        return
-    _orig_init = _cr.Session.__init__
-
-    def _patched_init(self, *args, **kwargs):
-        # chrome (and the default) fail through the proxy; safari succeeds.
-        if kwargs.get("impersonate") in (None, "chrome"):
-            kwargs["impersonate"] = "safari"
-        if ca:
-            kwargs.setdefault("verify", ca)
-        return _orig_init(self, *args, **kwargs)
-
-    _cr.Session.__init__ = _patched_init
-    _cr.Session._frakbox_proxy_patched = True
-
-
-_install_proxy_tls_patch()
+# The egress-proxy TLS compatibility patch for yfinance/curl_cffi is installed
+# by tools/__init__.py (which runs on import of this module, since it lives in
+# the tools package). See _install_proxy_tls_patch there for the rationale.
 
 
 # ---------------------------------------------------------------------------
