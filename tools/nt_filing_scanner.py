@@ -25,12 +25,15 @@ Usage:
 """
 import argparse
 import json
+import os
 import re
 import sys
 import time
 from datetime import datetime, timedelta
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+import tools  # applies curl_cffi chrome->safari proxy patch before yfinance is used
 
 import requests
 

@@ -42,6 +42,14 @@ import sys
 from typing import Union
 
 import pandas as pd
+
+# Ensure the curl_cffi chrome->safari proxy patch is applied before yfinance is
+# used, even if this module is imported directly (not via `import tools`).
+try:
+    from tools import _curl_cffi_proxy_patch_applied  # noqa: F401
+except Exception:
+    pass
+
 import yfinance as yf
 
 
