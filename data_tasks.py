@@ -965,6 +965,171 @@ def _check_same_index_or_sector_leadlag_artifact(factor, target):
     return None
 
 
+# ---- Systematic lead-lag family auto-suppression (asset-class buckets) ----
+# Codes the canonical rules that were previously recorded in the knowledge base
+# but NEVER implemented in the suppression cascade:
+#   - leadlag_systematic_batch_closure_2026_06_16
+#   - leadlag_systematic_family_classifier_extended_2026_06_17
+# The 2026-04-22 same-index/same-sector check above only covers equity SPDR /
+# sub-industry / single-stock chains. This adds the documented systematic
+# families that slip through it: macro/rate/FX drivers, commodity legs,
+# same-non-equity-asset-class pairs (treasuries, IG/HY credit, gold, FX,
+# crypto), international (non-synchronous) equity leads, leveraged->underlying
+# pairs, and same-US-equity-factor pairs (broad/style/sector ETFs).
+
+# FRED macro / rate / spread series prefixes — a lead-lag whose DRIVER is a
+# slow-moving macro series is a documented systematic dead end (the "lead" is
+# autocorrelation + common-factor exposure, not tradeable signal).
+_MACRO_FRED_PREFIXES = (
+    "DGS", "DFF", "FEDFUNDS", "MORTGAGE", "BAML", "T10Y", "T5Y", "T1Y",
+    "CPI", "PCE", "UNRATE", "GS", "DTB", "DPRIME", "DAAA", "DBAA", "WALCL",
+    "M2", "PAYEMS", "INDPRO", "UMCSENT", "VIXCLS",
+)
+
+# Fixed-income / credit ETFs that classify_asset() does NOT already bucket as
+# "treasury" (it folds most bonds into "treasury", but misses some HY/credit).
+_CREDIT_FIXED_INCOME = {
+    "ANGL", "FALN", "BKLN", "SJNK", "SHYG", "USHY", "HYLB", "HYS", "SRLN",
+    "PFF", "PGX", "PSK", "PFFD",  # preferreds (rate+credit)
+}
+
+# International equity ETFs (single-country / regional / developed-ex-US).
+# A non-US equity lead is non-synchronous with US sessions, so daily Granger
+# "lead" is a stale-price / time-zone artifact, not a tradeable signal.
+_INTL_EQUITY = {
+    "VEA", "VWO", "VXUS", "VEU", "VGK", "VPL", "EFA", "IEFA", "EEM", "IEMG",
+    "EZU", "EWZ", "EWA", "EWJ", "EWG", "EWU", "EWC", "EWY", "EWT", "EWH",
+    "EWW", "EWP", "EWQ", "EWI", "EWL", "EWN", "EWD", "EWS", "EWM", "FXI",
+    "MCHI", "KWEB", "INDA", "EPI", "EWZS", "ILF", "GXC", "ASHR", "FLKR",
+    "ACWI", "ACWX", "VT",
+}
+
+# Leveraged / inverse ETFs mapped to the underlying they mechanically track.
+# A lead-lag between a leveraged ETF and its own underlying is a pure
+# mechanical-tracking artifact.
+_LEVERAGED_TO_UNDERLYING = {
+    "UPRO": "SPY", "SPXL": "SPY", "SSO": "SPY", "SH": "SPY", "SPXU": "SPY",
+    "SDS": "SPY", "TQQQ": "QQQ", "SQQQ": "QQQ", "QLD": "QQQ", "PSQ": "QQQ",
+    "TNA": "IWM", "TZA": "IWM", "UDOW": "DIA", "SDOW": "DIA",
+    "TMF": "TLT", "TMV": "TLT", "UGL": "GLD", "NUGT": "GDX", "DUST": "GDX",
+}
+
+# US equity universe sharing the dominant US-equity-market factor: broad
+# indices, size/style/factor cuts, and sector ETFs (SPDR + Vanguard). Two legs
+# both inside this set are a same-class pair per the 2026-06-16 rule.
+_US_EQUITY_FACTOR_UNIVERSE = (
+    _BROAD_INDICES | _SECTOR_SPDR_ETFS | {
+        "IVV", "SPLG", "ITOT", "SCHB", "SCHX", "SCHA", "SCHM", "SCHV", "SCHG",
+        "VV", "VO", "VB", "VTV", "VUG", "VBR", "VBK", "VOE", "VOT", "MGK",
+        "IWB", "IWV", "IWD", "IWF", "IWN", "IWO", "IWP", "IWR", "IWS",
+        "QUAL", "MTUM", "USMV", "VLUE", "SIZE", "SPHQ", "SPLV", "SPYV", "SPYG",
+        "VGT", "VHT", "VFH", "VDE", "VAW", "VIS", "VCR", "VDC", "VPU", "VOX", "VNQ",
+    }
+)
+
+
+def _classify_leadlag_bucket(symbol):
+    """Coarse fixed-income/credit bucket helper that augments classify_asset."""
+    from tools.asset_class import classify_asset
+    s = (symbol or "").upper()
+    if s in _CREDIT_FIXED_INCOME:
+        return "fixed_income"
+    cls = classify_asset(s)
+    if cls == "treasury":  # classify_asset folds all bonds (IG/HY/treasury) here
+        return "fixed_income"
+    return cls
+
+
+def _check_systematic_leadlag_family_artifact(factor, target):
+    """Auto-suppress lead-lag scan hits belonging to documented systematic
+    dead-end families (macro/rate/FX driver, commodity leg, same non-equity
+    asset class, international non-synchronous lead, leveraged->underlying,
+    same US-equity factor). Returns a suppression dict or None.
+
+    Per leadlag_systematic_batch_closure_2026_06_16 and
+    leadlag_systematic_family_classifier_extended_2026_06_17. Statistical
+    Granger significance on these pairs reflects autocorrelation / shared-factor
+    exposure / non-synchronous trading, not tradeable lead-lag. Graduation still
+    requires a pre-registered regression+threshold with AR1 control and
+    beta>=0.05 + directional edge>50% + P&L>=0.5% in BOTH IS and OOS.
+    """
+    from tools.asset_class import classify_asset
+
+    f_raw = (factor or "").strip()
+    t_raw = (target or "").strip()
+    f = f_raw.upper().replace("FRED:", "")
+    t = t_raw.upper().replace("FRED:", "")
+    if not f or not t or f == t:
+        return None
+
+    def _make(detail, criterion):
+        return {
+            "check": "systematic_leadlag_family",
+            "rule": "leadlag_systematic_batch_closure_2026_06_16",
+            "suppressed": True,
+            "criterion": criterion,
+            "reason": (
+                f"{f_raw} -> {t_raw} lead-lag is a documented SYSTEMATIC dead-end "
+                f"family. {detail} Granger significance here reflects "
+                "autocorrelation / shared-factor exposure / non-synchronous "
+                "trading, not tradeable lead-lag. DO NOT queue as a scan hit "
+                "(record DEAD_END_SYSTEMATIC_LEADLAG). Graduation requires a "
+                "pre-registered regression+threshold with AR1 control and "
+                "beta>=0.05 + directional edge>50% + P&L>=0.5% in BOTH IS and OOS."
+            ),
+        }
+
+    # (1) Macro / rate / spread driver (FRED: prefix or a known macro series).
+    if f_raw.upper().startswith("FRED:") or any(f.startswith(p) for p in _MACRO_FRED_PREFIXES):
+        return _make(f"The lead leg {f_raw} is a slow-moving macro/rate/spread "
+                     "series.", "macro_rate_fx_driver")
+
+    fc, tc = classify_asset(f), classify_asset(t)
+
+    # (2) Either leg is a commodity (commodity->anything lead-lag is a documented
+    #     systematic dead end; commodity_sector_granger_leadlag_systematic_dead_end).
+    if "commodity" in (fc, tc):
+        return _make(f"One leg is a commodity ({f if fc=='commodity' else t}).",
+                     "commodity_leg")
+
+    # (3) FX driver / same FX class.
+    if fc == "fx":
+        return _make(f"The lead leg {f_raw} is an FX series.", "fx_driver")
+
+    # (4) Leveraged / inverse ETF <-> its own underlying (mechanical tracking).
+    if _LEVERAGED_TO_UNDERLYING.get(f) == t or _LEVERAGED_TO_UNDERLYING.get(t) == f:
+        return _make(f"{f} and {t} are a leveraged/inverse ETF and its own "
+                     "underlying (mechanical tracking).", "leveraged_to_underlying")
+
+    # (5) International (non-synchronous) equity lead, or cross-region equity pair.
+    if f in _INTL_EQUITY:
+        return _make(f"The lead leg {f} is an international equity ETF "
+                     "(non-synchronous with US sessions).", "intl_nonsynchronous_lead")
+    if (f in _INTL_EQUITY or t in _INTL_EQUITY) and is_equity(f) and is_equity(t):
+        return _make(f"{f} and {t} are a cross-region equity pair "
+                     "(shared global-equity factor / non-synchronous).",
+                     "cross_region_equity_pair")
+
+    # (6) Same non-equity asset class (both fixed income, both crypto, both fx).
+    fb, tb = _classify_leadlag_bucket(f), _classify_leadlag_bucket(t)
+    if fb == tb and fb in {"fixed_income", "crypto", "fx"}:
+        return _make(f"Both legs are the same asset class ({fb}).",
+                     f"same_asset_class_{fb}")
+
+    # (7) Same US-equity factor (broad index / style / sector ETFs).
+    if f in _US_EQUITY_FACTOR_UNIVERSE and t in _US_EQUITY_FACTOR_UNIVERSE:
+        return _make(f"{f} and {t} both belong to the US-equity universe and "
+                     "share the dominant US-equity-market factor.",
+                     "same_us_equity_factor")
+
+    return None
+
+
+def is_equity(symbol):
+    from tools.asset_class import is_equity as _ie
+    return _ie(symbol)
+
+
 def cmd_regression(args):
     """Run exposure, lead-lag, or structural break regression test."""
     from tools.timeseries import get_returns, get_aligned_returns
@@ -1022,6 +1187,11 @@ def cmd_regression(args):
         if artifact is None:
             # Fall through to same-index / same-sector mechanical-inclusion check.
             artifact = _check_same_index_or_sector_leadlag_artifact(args.factor, args.target)
+        if artifact is None:
+            # Fall through to the systematic asset-class family check (macro/rate
+            # driver, commodity leg, same-non-equity-class, intl non-synchronous,
+            # leveraged->underlying, same US-equity factor).
+            artifact = _check_systematic_leadlag_family_artifact(args.factor, args.target)
         if artifact is not None:
             result["scan_artifact_check"] = artifact
             result["scan_artifact_suppressed"] = artifact.get("suppressed", False)
