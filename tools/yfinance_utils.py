@@ -113,6 +113,7 @@ def safe_download(
 ) -> pd.DataFrame:
     """
     Download OHLCV data from yfinance with automatic MultiIndex flattening.
+    Falls back to Tiingo if yfinance fails.
 
     Wraps yf.download() and guarantees a clean, flat-column DataFrame regardless
     of yfinance version or number of tickers.
@@ -143,21 +144,88 @@ def safe_download(
                            auto_adjust=True, progress=False)
         aapl_close = df["Close_AAPL"]
     """
+    import os
+
     kwargs.setdefault("progress", False)
     kwargs.setdefault("auto_adjust", True)
 
     single = isinstance(tickers, str)
-    raw = yf.download(tickers, start=start, end=end, **kwargs)
 
-    if raw.empty:
+    # Try yfinance first
+    try:
+        raw = yf.download(tickers, start=start, end=end, **kwargs)
+        if not raw.empty:
+            ticker_hint = tickers if single else None
+            return flatten_yfinance_columns(raw, ticker=ticker_hint)
+    except Exception as e:
+        # Fall back to Tiingo if yfinance fails
+        pass
+
+    # Fall back to Tiingo
+    tiingo_key = os.environ.get("TIINGO_API_KEY")
+    if not tiingo_key:
         ticker_str = tickers if single else ", ".join(tickers)
         raise ValueError(
-            f"yfinance returned no data for {ticker_str!r} "
-            f"from {start} to {end}. Ticker may be delisted or invalid."
+            f"yfinance returned no data and TIINGO_API_KEY not set for {ticker_str!r} "
+            f"from {start} to {end}."
         )
 
-    ticker_hint = tickers if single else None
-    return flatten_yfinance_columns(raw, ticker=ticker_hint)
+    try:
+        from tiingo import TiingoClient
+        config = {"api_key": tiingo_key}
+        client = TiingoClient(config)
+
+        ticker_list = [tickers] if single else list(tickers)
+
+        # Fetch data for each ticker and combine
+        all_data = []
+        for ticker in ticker_list:
+            df = client.get_dataframe(ticker, startDate=start, endDate=end)
+
+            # Remove timezone info to match yfinance behavior
+            if df.index.tz is not None:
+                df.index = df.index.tz_localize(None)
+
+            df.columns = [c.lower() for c in df.columns]  # Normalize to lowercase
+
+            # Rename to match yfinance format (Open, High, Low, Close, Volume)
+            rename_map = {
+                'open': 'Open',
+                'high': 'High',
+                'low': 'Low',
+                'close': 'Close',
+                'volume': 'Volume'
+            }
+            df = df.rename(columns=rename_map)
+            df = df[['Open', 'High', 'Low', 'Close', 'Volume']]
+
+            if single:
+                all_data = df
+            else:
+                # Multi-ticker: add ticker suffix to column names
+                for col in df.columns:
+                    all_data.append(df[[col]].rename(columns={col: f"{col}_{ticker}"}))
+
+        if isinstance(all_data, list):
+            raw = pd.concat(all_data, axis=1)
+        else:
+            raw = all_data
+
+        if raw.empty:
+            ticker_str = tickers if single else ", ".join(tickers)
+            raise ValueError(
+                f"Tiingo returned no data for {ticker_str!r} "
+                f"from {start} to {end}. Ticker may be delisted or invalid."
+            )
+
+        return raw
+
+    except ImportError:
+        ticker_str = tickers if single else ", ".join(tickers)
+        raise ValueError(
+            f"yfinance failed and tiingo library not installed for {ticker_str!r} "
+            f"from {start} to {end}."
+        )
 
 
 def get_close_prices(
