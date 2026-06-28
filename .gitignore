@@ -23,3 +23,8 @@ canonical_retest*.log
 canonical_retest*.txt
 tools/item_302_raw_events.json
 tools/item_302_canonical_retest_events.json
+
+# Accruals survivorship test artifacts (regenerable research data, not code)
+data/cache/accruals_survivorship_result.json
+data/cache/sec_delisting_dates.json
+data/cache/*.log
