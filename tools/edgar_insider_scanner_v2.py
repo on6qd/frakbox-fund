@@ -28,7 +28,9 @@ import json
 import time
 import pickle
 import argparse
+import threading
 import xml.etree.ElementTree as ET
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
 from collections import defaultdict
 from typing import Optional
@@ -54,14 +56,18 @@ SEC_TIMEOUT = 20
 SEC_MAX_RETRIES = 3
 
 _last_request_time = 0.0
+_rate_limit_lock = threading.Lock()
 
 
 def _rate_limit():
+    # Thread-safe: serializes request dispatch so the real SEC request rate
+    # stays <= ~1/SEC_DELAY regardless of how many worker threads call sec_get.
     global _last_request_time
-    elapsed = time.time() - _last_request_time
-    if elapsed < SEC_DELAY:
-        time.sleep(SEC_DELAY - elapsed)
-    _last_request_time = time.time()
+    with _rate_limit_lock:
+        elapsed = time.time() - _last_request_time
+        if elapsed < SEC_DELAY:
+            time.sleep(SEC_DELAY - elapsed)
+        _last_request_time = time.time()
 
 
 def sec_get(url: str, timeout: int = SEC_TIMEOUT) -> Optional[requests.Response]:
@@ -473,27 +479,43 @@ def scan_insider_clusters(
 
     # issuer_cik -> [{parsed purchase info}]
     purchases_by_issuer = defaultdict(list)
+
+    # --- Concurrent fetch+parse (the ~730 serial XML downloads were the 137x
+    # data_access bottleneck). ThreadPoolExecutor + thread-safe _rate_limit()
+    # keeps the real SEC request rate bounded while parallelizing the wait. ---
+    def _fetch_and_parse(issuer_cik, filing):
+        xml = fetch_form4_xml(filing)
+        if xml is None:
+            return ("error", issuer_cik, None)
+        parsed = parse_form4_purchases(xml)
+        if parsed is None:
+            return ("not_purchase", issuer_cik, None)
+        return ("ok", issuer_cik, (parsed, filing))
+
+    tasks = [(cik, f) for cik, filings in candidates.items() for f in filings]
+    # issuer_cik -> list of (parsed, filing) for OK results
+    ok_by_issuer = defaultdict(list)
     fetched = 0
     errors = 0
-
-    for issuer_cik, filings in candidates.items():
-        # Deduplicate by insider (same insider may file amendments)
-        seen_insiders = set()
-        for filing in filings:
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        futures = [ex.submit(_fetch_and_parse, cik, f) for cik, f in tasks]
+        for fut in as_completed(futures):
+            status, issuer_cik, payload = fut.result()
             fetched += 1
             if not quiet and fetched % 50 == 0:
                 print(f"  Fetched {fetched}/{total_to_fetch}...")
-
-            xml = fetch_form4_xml(filing)
-            if xml is None:
+            if status == "error":
                 errors += 1
-                continue
+            elif status == "ok":
+                ok_by_issuer[issuer_cik].append(payload)
 
-            parsed = parse_form4_purchases(xml)
-            if parsed is None:
-                continue  # Not a purchase
-
-            # Skip duplicate insider filings (amendments)
+    # Per-insider dedup + value filter runs serially after collection. Sort each
+    # issuer's filings by filing_date so dedup (keep first seen insider) is
+    # deterministic regardless of thread completion order.
+    for issuer_cik, results in ok_by_issuer.items():
+        results.sort(key=lambda pf: (pf[1].get("filing_date", ""), pf[0].get("owner_cik", "")))
+        seen_insiders = set()
+        for parsed, filing in results:
             insider_key = parsed["owner_cik"] or parsed["owner_name"]
             if insider_key in seen_insiders:
                 continue
