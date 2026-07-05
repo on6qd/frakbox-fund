@@ -28,7 +28,9 @@ import json
 import time
 import pickle
 import argparse
+import threading
 import xml.etree.ElementTree as ET
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
 from collections import defaultdict
 from typing import Optional
@@ -54,14 +56,19 @@ SEC_TIMEOUT = 20
 SEC_MAX_RETRIES = 3
 
 _last_request_time = 0.0
+_rate_lock = threading.Lock()  # serializes rate-limit bookkeeping across worker threads
+FETCH_WORKERS = 8  # parallel Form 4 XML fetches in Step 3
 
 
 def _rate_limit():
+    # Hold the lock across the sleep so concurrent workers stagger their
+    # requests and collectively stay under the SEC 10 req/sec limit.
     global _last_request_time
-    elapsed = time.time() - _last_request_time
-    if elapsed < SEC_DELAY:
-        time.sleep(SEC_DELAY - elapsed)
-    _last_request_time = time.time()
+    with _rate_lock:
+        elapsed = time.time() - _last_request_time
+        if elapsed < SEC_DELAY:
+            time.sleep(SEC_DELAY - elapsed)
+        _last_request_time = time.time()
 
 
 def sec_get(url: str, timeout: int = SEC_TIMEOUT) -> Optional[requests.Response]:
@@ -473,47 +480,67 @@ def scan_insider_clusters(
 
     # issuer_cik -> [{parsed purchase info}]
     purchases_by_issuer = defaultdict(list)
+
+    # Flatten to a work list. Fetching + XML parsing is network-bound, so run it
+    # across a thread pool; aggregation (dedup, ordering) is done serially below
+    # in a deterministic order so results are identical regardless of completion
+    # order. Sorting by filing_date makes the "keep first insider" dedup stable.
+    work = []
+    for issuer_cik, filings in candidates.items():
+        for filing in sorted(filings, key=lambda f: f.get("filing_date", "")):
+            work.append((issuer_cik, filing))
+
+    def _fetch_and_parse(item):
+        issuer_cik, filing = item
+        xml = fetch_form4_xml(filing)
+        if xml is None:
+            return (issuer_cik, filing, None, True)  # error
+        parsed = parse_form4_purchases(xml)
+        return (issuer_cik, filing, parsed, False)
+
+    results = [None] * len(work)
     fetched = 0
     errors = 0
-
-    for issuer_cik, filings in candidates.items():
-        # Deduplicate by insider (same insider may file amendments)
-        seen_insiders = set()
-        for filing in filings:
+    with ThreadPoolExecutor(max_workers=FETCH_WORKERS) as executor:
+        future_to_idx = {executor.submit(_fetch_and_parse, item): i
+                         for i, item in enumerate(work)}
+        for future in as_completed(future_to_idx):
+            idx = future_to_idx[future]
+            issuer_cik, filing, parsed, is_error = future.result()
+            results[idx] = (issuer_cik, filing, parsed)
             fetched += 1
+            if is_error:
+                errors += 1
             if not quiet and fetched % 50 == 0:
                 print(f"  Fetched {fetched}/{total_to_fetch}...")
 
-            xml = fetch_form4_xml(filing)
-            if xml is None:
-                errors += 1
-                continue
+    # Serial, deterministic aggregation over the original (sorted) work order.
+    seen_by_issuer = defaultdict(set)
+    for issuer_cik, filing, parsed in results:
+        if parsed is None:
+            continue  # Not a purchase / fetch error
 
-            parsed = parse_form4_purchases(xml)
-            if parsed is None:
-                continue  # Not a purchase
+        # Skip duplicate insider filings (amendments)
+        insider_key = parsed["owner_cik"] or parsed["owner_name"]
+        if insider_key in seen_by_issuer[issuer_cik]:
+            continue
+        seen_by_issuer[issuer_cik].add(insider_key)
 
-            # Skip duplicate insider filings (amendments)
-            insider_key = parsed["owner_cik"] or parsed["owner_name"]
-            if insider_key in seen_insiders:
-                continue
-            seen_insiders.add(insider_key)
-
-            total_value = sum(t["value"] for t in parsed["transactions"])
-            if total_value >= min_value_per_insider:
-                purchases_by_issuer[issuer_cik].append({
-                    "name": parsed["owner_name"],
-                    "cik": parsed["owner_cik"],
-                    "ticker": parsed["issuer_ticker"],
-                    "issuer_name": parsed["issuer_name"],
-                    "is_officer": parsed["is_officer"],
-                    "is_director": parsed["is_director"],
-                    "title": parsed["officer_title"],
-                    "value": total_value,
-                    "n_transactions": len(parsed["transactions"]),
-                    "dates": [t["date"] for t in parsed["transactions"]],
-                    "filing_date": filing.get("filing_date", ""),
-                })
+        total_value = sum(t["value"] for t in parsed["transactions"])
+        if total_value >= min_value_per_insider:
+            purchases_by_issuer[issuer_cik].append({
+                "name": parsed["owner_name"],
+                "cik": parsed["owner_cik"],
+                "ticker": parsed["issuer_ticker"],
+                "issuer_name": parsed["issuer_name"],
+                "is_officer": parsed["is_officer"],
+                "is_director": parsed["is_director"],
+                "title": parsed["officer_title"],
+                "value": total_value,
+                "n_transactions": len(parsed["transactions"]),
+                "dates": [t["date"] for t in parsed["transactions"]],
+                "filing_date": filing.get("filing_date", ""),
+            })
 
     if not quiet:
         print(f"  Done: {fetched} fetched, {errors} errors")

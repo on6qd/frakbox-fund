@@ -25,6 +25,7 @@ Usage:
 """
 import argparse
 import json
+import os
 import re
 import sys
 import time
@@ -33,6 +34,11 @@ from datetime import datetime, timedelta
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import requests
+
+# Import the tools package first so the curl_cffi chrome->safari shim is
+# installed before yfinance creates any Session (this module imports yfinance
+# directly and would otherwise fail the egress-proxy TLS handshake).
+import tools  # noqa: F401
 
 try:
     import yfinance as yf
