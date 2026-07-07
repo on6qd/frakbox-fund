@@ -23,3 +23,6 @@ canonical_retest*.log
 canonical_retest*.txt
 tools/item_302_raw_events.json
 tools/item_302_canonical_retest_events.json
+
+# Session scratchpad (temporary working files)
+scratchpad/
