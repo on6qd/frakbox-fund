@@ -302,6 +302,7 @@ def cmd_scan_insiders_evaluate(args):
                 days_since_latest_filing=c.get("days_since_latest_filing"),
                 max_trans_to_filing_lag=c.get("max_trans_to_filing_lag"),
                 acceptance_time=c.get("latest_accept_time"),
+                insiders_detail=c.get("insiders"),
             )
             evaluated.append({
                 "ticker": ticker,

@@ -162,6 +162,60 @@ def classify_trigger_class(acceptance_time_str: Optional[str] = None) -> str:
         return "unknown"
 
 
+def detect_related_party_coordination(insiders, min_matching: int = 2) -> dict:
+    """
+    Detect WBX-style coordinated financing that masquerades as an open-market
+    insider cluster.
+
+    Signature: >=2 insiders buying the IDENTICAL dollar amount (to the cent) on a
+    SHARED transaction date. Genuine independent open-market purchases essentially
+    never match to the cent (different insiders buy round *share* counts at varying
+    intraday prices -> different dollar values). Identical dollar sizing means the
+    buys were sized centrally in dollars — a private placement / registered-direct
+    participation / controlling-shareholder capital injection — NOT independent
+    conviction. These do not carry the validated insider-cluster edge.
+
+    Example (wbx_insider_cluster_related_party_2026_07_04): 3 Wallbox directors
+    (Riberas, Richer, Aguera), all linked to the Acek/Gonvarri controlling
+    shareholder, each bought EXACTLY $1,364,504 on the same day.
+
+    Returns {"detected": bool, ...}. Fails open (detected=False) when per-insider
+    detail is unavailable.
+
+    NOTE: this catches the identical-amount pattern only. The SVC pattern
+    (svc_insider_cluster_april2026 — value dominated by a single related management
+    company) is entity-based and cannot be detected mechanically from Form 4 dollar
+    amounts alone; it still requires a manual related-party check.
+    """
+    from collections import defaultdict
+
+    by_value = defaultdict(list)
+    for ins in insiders or []:
+        val = ins.get("value")
+        if val is None:
+            continue
+        try:
+            by_value[round(float(val), 2)].append(ins)
+        except (TypeError, ValueError):
+            continue
+
+    for val, matched in by_value.items():
+        if val <= 0 or len(matched) < min_matching:
+            continue
+        # Require a shared transaction date to confirm same-day coordination.
+        date_sets = [set(m.get("dates") or []) for m in matched]
+        common = set.intersection(*date_sets) if date_sets and all(date_sets) else set()
+        if common:
+            return {
+                "detected": True,
+                "matched_value": val,
+                "n_matching": len(matched),
+                "shared_date": sorted(common)[0],
+                "names": [m.get("name", "?") for m in matched],
+            }
+    return {"detected": False}
+
+
 # Trigger class expected values from intraday replay analysis (April 2026)
 TRIGGER_CLASS_EV = {
     "intraday_same_day":    {"ev_5d": 1.87, "pos_rate": 62.2, "entry": "same_session",   "tradeable": True},
@@ -215,6 +269,19 @@ def evaluate_cluster(
             break
 
     # --- Evaluate criteria ---
+
+    # 0. Related-party coordination gate (HARD BLOCK)
+    # WBX-style: >=2 insiders buying identical dollar amounts same day = coordinated
+    # capital injection, not independent open-market conviction. No validated edge.
+    # Source: wbx_insider_cluster_related_party_2026_07_04, svc_insider_cluster_april2026
+    related_party = detect_related_party_coordination(insiders_detail)
+    if related_party["detected"]:
+        blockers.append(
+            f"✗ Related-party coordination: {related_party['n_matching']} insiders "
+            f"({', '.join(related_party['names'])}) each bought identical "
+            f"${related_party['matched_value']:,.0f} on {related_party['shared_date']} "
+            f"— coordinated financing, not open-market conviction (SKIP_RELATED_PARTY)"
+        )
 
     # 1. CEO/CFO presence (most important feature)
     has_csuite = has_ceo or has_cfo
@@ -481,6 +548,7 @@ def evaluate_cluster(
         },
         "trigger_class": trigger_class,
         "trigger_class_ev": trigger_ev,
+        "related_party_coordination": related_party,
     }
 
 
