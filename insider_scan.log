@@ -1,0 +1,19 @@
+Failed to get ticker '^VIX' reason: Failed to perform, curl: (35) Recv failure: Connection reset by peer. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+Failed to get ticker '^VIX' reason: Failed to perform, curl: (35) Recv failure: Connection reset by peer. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+Traceback (most recent call last):
+  File "/home/user/frakbox-fund/data_tasks.py", line 1737, in <module>
+    main()
+  File "/home/user/frakbox-fund/data_tasks.py", line 1733, in main
+    commands[args.command](args)
+  File "/home/user/frakbox-fund/data_tasks.py", line 341, in cmd_scan_insiders_evaluate
+    result_id = _store_result(
+                ^^^^^^^^^^^^^^
+  File "/home/user/frakbox-fund/data_tasks.py", line 30, in _store_result
+    db.store_task_result(
+  File "/home/user/frakbox-fund/db.py", line 1620, in store_task_result
+    init_db()
+  File "/home/user/frakbox-fund/db.py", line 116, in init_db
+    _run_migrations(conn)
+  File "/home/user/frakbox-fund/db.py", line 138, in _run_migrations
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_hypotheses_class ON hypotheses(hypothesis_class)")
+ValueError: wal_insert_begin failed
