@@ -23,3 +23,9 @@ canonical_retest*.log
 canonical_retest*.txt
 tools/item_302_raw_events.json
 tools/item_302_canonical_retest_events.json
+
+# Accruals frontier derived caches (rebuilt from SEC frames API + yfinance)
+data/cache/accruals_frames/
+data/cache/accruals_frames_panel.json
+data/cache/accruals_endjune_prices.json
+data/cache/sec_sic_by_cik.json
