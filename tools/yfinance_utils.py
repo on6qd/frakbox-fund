@@ -105,6 +105,185 @@ def flatten_yfinance_columns(df: pd.DataFrame, ticker: str | None = None) -> pd.
     return df
 
 
+# ---------------------------------------------------------------------------
+# Plain-requests fallback for proxied / curl_cffi-hostile environments.
+#
+# yfinance fetches through curl_cffi's browser-TLS impersonation. Behind the
+# agent egress proxy (which re-terminates TLS) that impersonated handshake is
+# reset ("curl: (35) Recv failure: Connection reset by peer"), so yf.download()
+# returns nothing on every fresh clone — the #1 recurring data_access friction.
+# A plain requests.Session with a real browser User-Agent tunnels through the
+# proxy cleanly and Yahoo's public v8 chart JSON API returns the same OHLCV.
+# We build a MultiIndex frame shaped exactly like yf.download() output so the
+# existing downstream flatten / xs logic is reused unchanged.
+# ---------------------------------------------------------------------------
+
+_YAHOO_UA = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+    "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15"
+)
+
+
+def _tiingo_one(ticker: str, start: str, end: str, auto_adjust: bool = True):
+    """Fetch daily OHLCV for one equity/ETF ticker from Tiingo's EOD API.
+
+    Tiingo is authenticated (not IP-rate-limited like Yahoo) so it is the
+    reliable primary source behind the shared egress proxy. It only covers
+    US equities/ETFs — index (^VIX), futures (CL=F), FX and crypto symbols are
+    not on the daily endpoint and return None here (caller falls back to Yahoo).
+    Returns a DataFrame indexed by date with Open/High/Low/Close/Volume, or None.
+    """
+    import os
+    import requests
+
+    key = os.environ.get("TIINGO_API_KEY", "")
+    if not key:
+        return None
+    # Tiingo daily only handles plain equity/ETF symbols.
+    if any(ch in ticker for ch in ("^", "=", "-")) or "." in ticker:
+        return None
+    try:
+        r = requests.get(
+            f"https://api.tiingo.com/tiingo/daily/{ticker}/prices",
+            params={"startDate": start, "endDate": end, "format": "json"},
+            headers={"Content-Type": "application/json",
+                     "Authorization": f"Token {key}"},
+            timeout=25,
+        )
+    except Exception:
+        return None
+    if r.status_code != 200:
+        return None
+    try:
+        rows = r.json()
+    except Exception:
+        return None
+    if not rows:
+        return None
+    idx = pd.to_datetime([row["date"] for row in rows], utc=True).tz_convert(None).normalize()
+    if auto_adjust:
+        o = [row.get("adjOpen", row.get("open")) for row in rows]
+        h = [row.get("adjHigh", row.get("high")) for row in rows]
+        low = [row.get("adjLow", row.get("low")) for row in rows]
+        c = [row.get("adjClose", row.get("close")) for row in rows]
+        v = [row.get("adjVolume", row.get("volume")) for row in rows]
+    else:
+        o = [row.get("open") for row in rows]
+        h = [row.get("high") for row in rows]
+        low = [row.get("low") for row in rows]
+        c = [row.get("close") for row in rows]
+        v = [row.get("volume") for row in rows]
+    df = pd.DataFrame(
+        {"Open": o, "High": h, "Low": low, "Close": c, "Volume": v}, index=idx
+    )
+    return df[~df.index.duplicated(keep="last")].dropna(how="all")
+
+
+def _requests_yahoo_multi(
+    ticker_list: list[str],
+    start: str,
+    end: str,
+    interval: str = "1d",
+    auto_adjust: bool = True,
+) -> pd.DataFrame:
+    """Fetch OHLCV for one or more tickers via Yahoo's v8 chart JSON API using
+    plain ``requests`` (works where curl_cffi TLS impersonation is proxy-reset).
+
+    Returns a DataFrame whose columns are a ``(metric, ticker)`` MultiIndex —
+    the same shape yf.download() produces for multiple tickers — or an empty
+    DataFrame if every ticker fails.
+    """
+    import time
+    import requests
+    from datetime import datetime, timezone, timedelta
+
+    def _to_epoch(d: str) -> int:
+        return int(
+            datetime.strptime(d, "%Y-%m-%d")
+            .replace(tzinfo=timezone.utc)
+            .timestamp()
+        )
+
+    p1 = _to_epoch(start)
+    # Yahoo period2 is exclusive-ish; pad a day so `end` is inclusive like yfinance.
+    p2 = _to_epoch(end) + 86400
+
+    sess = requests.Session()
+    sess.headers.update({"User-Agent": _YAHOO_UA, "Accept": "application/json"})
+
+    frames: dict[str, pd.DataFrame] = {}
+    for ticker in ticker_list:
+        # Reliable authenticated source first (equities/ETFs).
+        df_t = _tiingo_one(ticker, start, end, auto_adjust=auto_adjust)
+        if df_t is not None and not df_t.empty:
+            frames[ticker] = df_t
+            continue
+        for host in ("query1", "query2"):
+            url = f"https://{host}.finance.yahoo.com/v8/finance/chart/{ticker}"
+            params = {
+                "period1": p1,
+                "period2": p2,
+                "interval": interval,
+                "events": "div,splits",
+                "includeAdjustedClose": "true",
+            }
+            for attempt in range(3):
+                try:
+                    r = sess.get(url, params=params, timeout=25)
+                except Exception:
+                    time.sleep(1.0)
+                    continue
+                if r.status_code == 429:
+                    time.sleep(1.5 * (attempt + 1))
+                    continue
+                if r.status_code != 200:
+                    break
+                try:
+                    result = r.json()["chart"]["result"]
+                except Exception:
+                    break
+                if not result:
+                    break
+                node = result[0]
+                ts = node.get("timestamp")
+                quote = node.get("indicators", {}).get("quote", [{}])[0]
+                if not ts or not quote:
+                    break
+                idx = pd.to_datetime(ts, unit="s").normalize()
+                df_t = pd.DataFrame(
+                    {
+                        "Open": quote.get("open"),
+                        "High": quote.get("high"),
+                        "Low": quote.get("low"),
+                        "Close": quote.get("close"),
+                        "Volume": quote.get("volume"),
+                    },
+                    index=idx,
+                )
+                if auto_adjust:
+                    adj = node.get("indicators", {}).get("adjclose")
+                    if adj and adj[0].get("adjclose"):
+                        adjclose = pd.Series(adj[0]["adjclose"], index=idx)
+                        ratio = adjclose / df_t["Close"]
+                        for col in ("Open", "High", "Low", "Close"):
+                            df_t[col] = df_t[col] * ratio
+                df_t = df_t[~df_t.index.duplicated(keep="last")].dropna(how="all")
+                break
+            if df_t is not None and not df_t.empty:
+                break
+        if df_t is not None and not df_t.empty:
+            frames[ticker] = df_t
+
+    if not frames:
+        return pd.DataFrame()
+
+    combined = pd.concat(frames, axis=1)  # columns -> (ticker, metric)
+    combined.columns = combined.columns.swaplevel(0, 1)  # -> (metric, ticker)
+    combined = combined.sort_index(axis=1)
+    combined.index.name = "Date"
+    return combined
+
+
 def safe_download(
     tickers: Union[str, list[str]],
     start: str,
@@ -147,9 +326,21 @@ def safe_download(
     kwargs.setdefault("auto_adjust", True)
 
     single = isinstance(tickers, str)
-    raw = yf.download(tickers, start=start, end=end, **kwargs)
+    ticker_list = [tickers] if single else list(tickers)
+    try:
+        raw = yf.download(tickers, start=start, end=end, **kwargs)
+    except Exception:
+        raw = pd.DataFrame()
 
-    if raw.empty:
+    if raw is None or raw.empty:
+        # Fallback: plain-requests Yahoo chart API (proxy-safe).
+        raw = _requests_yahoo_multi(
+            ticker_list, start, end,
+            interval=kwargs.get("interval", "1d"),
+            auto_adjust=kwargs.get("auto_adjust", True),
+        )
+
+    if raw is None or raw.empty:
         ticker_str = tickers if single else ", ".join(tickers)
         raise ValueError(
             f"yfinance returned no data for {ticker_str!r} "
@@ -202,9 +393,20 @@ def get_close_prices(
     single = isinstance(tickers, str)
     ticker_list = [tickers] if single else list(tickers)
 
-    raw = yf.download(ticker_list, start=start, end=end, **kwargs)
+    try:
+        raw = yf.download(ticker_list, start=start, end=end, **kwargs)
+    except Exception:
+        raw = pd.DataFrame()
 
-    if raw.empty:
+    if raw is None or raw.empty:
+        # Fallback: plain-requests Yahoo chart API (proxy-safe).
+        raw = _requests_yahoo_multi(
+            ticker_list, start, end,
+            interval=kwargs.get("interval", "1d"),
+            auto_adjust=kwargs.get("auto_adjust", True),
+        )
+
+    if raw is None or raw.empty:
         raise ValueError(
             f"yfinance returned no data for {ticker_list} "
             f"from {start} to {end}."
@@ -280,6 +482,18 @@ def get_current_price(ticker: str) -> float:
         hist = pd.DataFrame()
 
     if hist is None or hist.empty:
+        # Second fallback: plain-requests Yahoo chart API (proxy-safe).
+        try:
+            raw = _requests_yahoo_multi(
+                [ticker],
+                start_dt.strftime("%Y-%m-%d"),
+                end_dt.strftime("%Y-%m-%d"),
+            )
+            hist = flatten_yfinance_columns(raw, ticker=ticker)
+        except Exception:
+            hist = pd.DataFrame()
+
+    if hist is None or hist.empty:
         # Third fallback: try Tiingo
         import os, requests
         tiingo_key = os.environ.get("TIINGO_API_KEY", "")
@@ -348,10 +562,14 @@ if __name__ == "__main__":
     result = flatten_yfinance_columns(flat)
     assert list(result.columns) == ["Close", "Open"], "Should be unchanged"
 
-    # Test 6: flatten_yfinance_columns on raw multi-ticker download
-    import yfinance as yf
-    raw = yf.download(["AAPL", "MSFT"], start="2024-01-02", end="2024-01-05",
-                      progress=False, auto_adjust=True)
+    # Test 6: flatten_yfinance_columns on a MultiIndex frame (yfinance-shaped).
+    # Built synthetically so the test does not depend on a live download (which
+    # fails under the egress proxy where curl_cffi TLS impersonation is reset).
+    idx = pd.to_datetime(["2024-01-02", "2024-01-03"])
+    cols = pd.MultiIndex.from_tuples(
+        [("Close", "AAPL"), ("Close", "MSFT"), ("Open", "AAPL"), ("Open", "MSFT")]
+    )
+    raw = pd.DataFrame([[1, 2, 3, 4], [5, 6, 7, 8]], index=idx, columns=cols)
     assert isinstance(raw.columns, pd.MultiIndex), "Raw download should be MultiIndex"
     flat_raw = flatten_yfinance_columns(raw)
     assert not isinstance(flat_raw.columns, pd.MultiIndex), "After flatten should be flat"
