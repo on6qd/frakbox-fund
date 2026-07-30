@@ -105,6 +105,34 @@ def flatten_yfinance_columns(df: pd.DataFrame, ticker: str | None = None) -> pd.
     return df
 
 
+def _tiingo_ohlcv(ticker_list, start, end):
+    """Fetch OHLCV for each ticker from Tiingo (cached, rate-limited).
+
+    Reuses market_data._fetch_history_tiingo, which handles disk caching and
+    daily rate-limit protection. Returns {ticker: DataFrame(Open/High/Low/Close/
+    Volume, DatetimeIndex)} for every symbol Tiingo could serve.
+
+    Tiingo only covers cash equities/ETFs. Futures ("=F"), indices ("^..."),
+    FRED ("FRED:") and Fama-French ("FF:") series are silently skipped — those
+    remain a known limitation handled by their own fetchers.
+    """
+    try:
+        from market_data import _fetch_history_tiingo
+    except Exception:
+        return {}
+    out = {}
+    for t in ticker_list:
+        if "=" in t or t.startswith("^") or ":" in t:
+            continue  # not a Tiingo-coverable cash-equity symbol
+        try:
+            df = _fetch_history_tiingo(t, start, end)
+        except Exception:
+            df = None
+        if df is not None and not df.empty:
+            out[t] = df
+    return out
+
+
 def safe_download(
     tickers: Union[str, list[str]],
     start: str,
@@ -147,9 +175,27 @@ def safe_download(
     kwargs.setdefault("auto_adjust", True)
 
     single = isinstance(tickers, str)
-    raw = yf.download(tickers, start=start, end=end, **kwargs)
+    ticker_list = [tickers] if single else list(tickers)
 
-    if raw.empty:
+    try:
+        raw = yf.download(tickers, start=start, end=end, **kwargs)
+    except Exception:
+        raw = pd.DataFrame()
+
+    if raw is None or raw.empty:
+        # yfinance failed (empty or network reset behind proxy) — fall back to Tiingo.
+        tdata = _tiingo_ohlcv(ticker_list, start, end)
+        if tdata:
+            if single:
+                return tdata[ticker_list[0]].sort_index()
+            frames = []
+            for t in ticker_list:
+                if t in tdata:
+                    df = tdata[t].copy()
+                    df.columns = [f"{c}_{t}" for c in df.columns]
+                    frames.append(df)
+            if frames:
+                return pd.concat(frames, axis=1).sort_index()
         ticker_str = tickers if single else ", ".join(tickers)
         raise ValueError(
             f"yfinance returned no data for {ticker_str!r} "
@@ -202,9 +248,20 @@ def get_close_prices(
     single = isinstance(tickers, str)
     ticker_list = [tickers] if single else list(tickers)
 
-    raw = yf.download(ticker_list, start=start, end=end, **kwargs)
+    try:
+        raw = yf.download(ticker_list, start=start, end=end, **kwargs)
+    except Exception:
+        raw = pd.DataFrame()
 
-    if raw.empty:
+    if raw is None or raw.empty:
+        # yfinance failed — fall back to Tiingo (cash equities/ETFs only).
+        tdata = _tiingo_ohlcv(ticker_list, start, end)
+        if tdata:
+            close_df = pd.DataFrame(
+                {t: tdata[t]["Close"] for t in ticker_list if t in tdata}
+            )
+            if not close_df.empty:
+                return close_df.sort_index().dropna(how="all")
         raise ValueError(
             f"yfinance returned no data for {ticker_list} "
             f"from {start} to {end}."
