@@ -38,11 +38,112 @@ Usage examples:
 
 from __future__ import annotations
 
+import os
 import sys
+import time
 from typing import Union
 
 import pandas as pd
 import yfinance as yf
+
+
+# ---------------------------------------------------------------------------
+# Tiingo fallback (historical OHLCV)
+# ---------------------------------------------------------------------------
+# The egress proxy in fresh-clone environments periodically resets curl_cffi's
+# TLS connection to Yahoo (curl error 35), so yf.download() returns empty. When
+# a TIINGO_API_KEY is present we fall back to Tiingo's authenticated EOD daily
+# endpoint, which is reliable behind the proxy. This is the single most recurring
+# data-access friction in this project; keep this fallback wired into BOTH
+# safe_download() and get_close_prices() (not just get_current_price()).
+#
+# Coverage note: Tiingo daily covers equities/ETFs only. It does NOT cover
+# indices (^VIX), futures (CL=F), or FX (EURUSD=X) — those tickers fall through
+# and still raise, which is the correct behavior (no silent bad data).
+
+_TIINGO_CACHE: dict = {}
+_TIINGO_LAST_CALL = [0.0]
+_TIINGO_MIN_INTERVAL = 0.12  # seconds between calls (rate-limit courtesy)
+
+
+def _tiingo_ohlcv(ticker: str, start: str, end: str, adjusted: bool = True):
+    """Fetch daily OHLCV for a single ticker from Tiingo.
+
+    Returns a DataFrame indexed by date with columns Open/High/Low/Close/Volume,
+    or None if unavailable (no key, non-200, empty, or an unsupported symbol
+    such as an index/future/FX pair). Never raises.
+    """
+    key = os.environ.get("TIINGO_API_KEY", "")
+    if not key:
+        return None
+    # Tiingo covers equities/ETFs; skip symbols it structurally cannot serve.
+    if any(c in ticker for c in ("^", "=")):
+        return None
+
+    cache_key = (ticker, start, end, adjusted)
+    if cache_key in _TIINGO_CACHE:
+        return _TIINGO_CACHE[cache_key]
+
+    import requests
+
+    # Simple rate limit
+    delta = time.monotonic() - _TIINGO_LAST_CALL[0]
+    if delta < _TIINGO_MIN_INTERVAL:
+        time.sleep(_TIINGO_MIN_INTERVAL - delta)
+
+    try:
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Token {key}",
+        }
+        url = f"https://api.tiingo.com/tiingo/daily/{ticker}/prices"
+        r = requests.get(
+            url,
+            params={"startDate": start, "endDate": end},
+            headers=headers,
+            timeout=15,
+        )
+        _TIINGO_LAST_CALL[0] = time.monotonic()
+        if r.status_code != 200:
+            _TIINGO_CACHE[cache_key] = None
+            return None
+        data = r.json()
+        if not data:
+            _TIINGO_CACHE[cache_key] = None
+            return None
+    except Exception:
+        return None
+
+    o = "adjOpen" if adjusted else "open"
+    h = "adjHigh" if adjusted else "high"
+    low = "adjLow" if adjusted else "low"
+    c = "adjClose" if adjusted else "close"
+    v = "adjVolume" if adjusted else "volume"
+    rows = []
+    idx = []
+    for row in data:
+        idx.append(pd.Timestamp(row["date"]).tz_localize(None).normalize())
+        rows.append({
+            "Open": row.get(o, row.get("open")),
+            "High": row.get(h, row.get("high")),
+            "Low": row.get(low, row.get("low")),
+            "Close": row.get(c, row.get("close")),
+            "Volume": row.get(v, row.get("volume")),
+        })
+    df = pd.DataFrame(rows, index=pd.DatetimeIndex(idx))
+    df = df.sort_index()
+    _TIINGO_CACHE[cache_key] = df
+    return df
+
+
+def _tiingo_multi(tickers: list[str], start: str, end: str, adjusted: bool = True):
+    """Fetch OHLCV for several tickers; return {ticker: DataFrame} for those found."""
+    out = {}
+    for t in tickers:
+        df = _tiingo_ohlcv(t, start, end, adjusted=adjusted)
+        if df is not None and not df.empty:
+            out[t] = df
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -147,9 +248,29 @@ def safe_download(
     kwargs.setdefault("auto_adjust", True)
 
     single = isinstance(tickers, str)
-    raw = yf.download(tickers, start=start, end=end, **kwargs)
+    try:
+        raw = yf.download(tickers, start=start, end=end, **kwargs)
+    except Exception:
+        raw = pd.DataFrame()
 
-    if raw.empty:
+    if raw is None or raw.empty:
+        # Fallback: Tiingo authenticated EOD (reliable behind proxy).
+        adjusted = bool(kwargs.get("auto_adjust", True))
+        ticker_list = [tickers] if single else list(tickers)
+        fetched = _tiingo_multi(ticker_list, start, end, adjusted=adjusted)
+        if fetched:
+            if single:
+                return fetched[ticker_list[0]].copy()
+            # Multi-ticker: assemble "metric_TICKER" flat columns.
+            frames = []
+            for sym in ticker_list:
+                if sym in fetched:
+                    df = fetched[sym].copy()
+                    df.columns = [f"{m}_{sym}" for m in df.columns]
+                    frames.append(df)
+            if frames:
+                return pd.concat(frames, axis=1).sort_index()
+
         ticker_str = tickers if single else ", ".join(tickers)
         raise ValueError(
             f"yfinance returned no data for {ticker_str!r} "
@@ -202,9 +323,20 @@ def get_close_prices(
     single = isinstance(tickers, str)
     ticker_list = [tickers] if single else list(tickers)
 
-    raw = yf.download(ticker_list, start=start, end=end, **kwargs)
+    try:
+        raw = yf.download(ticker_list, start=start, end=end, **kwargs)
+    except Exception:
+        raw = pd.DataFrame()
 
-    if raw.empty:
+    if raw is None or raw.empty:
+        # Fallback: Tiingo authenticated EOD (reliable behind proxy).
+        adjusted = bool(kwargs.get("auto_adjust", True))
+        fetched = _tiingo_multi(ticker_list, start, end, adjusted=adjusted)
+        if fetched:
+            close_df = pd.DataFrame(
+                {sym: fetched[sym]["Close"] for sym in ticker_list if sym in fetched}
+            ).sort_index()
+            return close_df.dropna(how="all")
         raise ValueError(
             f"yfinance returned no data for {ticker_list} "
             f"from {start} to {end}."
@@ -348,13 +480,20 @@ if __name__ == "__main__":
     result = flatten_yfinance_columns(flat)
     assert list(result.columns) == ["Close", "Open"], "Should be unchanged"
 
-    # Test 6: flatten_yfinance_columns on raw multi-ticker download
-    import yfinance as yf
-    raw = yf.download(["AAPL", "MSFT"], start="2024-01-02", end="2024-01-05",
-                      progress=False, auto_adjust=True)
-    assert isinstance(raw.columns, pd.MultiIndex), "Raw download should be MultiIndex"
-    flat_raw = flatten_yfinance_columns(raw)
+    # Test 6: flatten_yfinance_columns on a MultiIndex frame. Built synthetically
+    # (matching yfinance's ('metric','ticker') layout) so the unit self-test stays
+    # deterministic and network-independent — the live download path is covered by
+    # tests 2-4 above, which now transparently fall back to Tiingo behind the proxy.
+    synth = pd.DataFrame(
+        [[1.0, 2.0, 3.0, 4.0]],
+        columns=pd.MultiIndex.from_tuples(
+            [("Close", "AAPL"), ("Open", "AAPL"), ("Close", "MSFT"), ("Open", "MSFT")]
+        ),
+    )
+    assert isinstance(synth.columns, pd.MultiIndex), "Synthetic frame should be MultiIndex"
+    flat_raw = flatten_yfinance_columns(synth)
     assert not isinstance(flat_raw.columns, pd.MultiIndex), "After flatten should be flat"
+    assert "Close_AAPL" in flat_raw.columns, f"Got: {list(flat_raw.columns)}"
     print(f"  flatten_yfinance_columns multi: {list(flat_raw.columns)[:6]}")
 
     print("\nAll tests passed.")

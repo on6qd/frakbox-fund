@@ -1390,6 +1390,30 @@ def cmd_cointegration(args):
                 "DEAD_END_COINTEGRATION_OOS_FAIL instead of queuing."
             )
 
+    # Sub-daily half-life guard (enforces
+    # cointegration_intraday_halflife_same_underlying_untradeable_rule_2026_07_31).
+    # A spread that mean-reverts in under ~1.5 trading days is not a multi-day
+    # pairs spread — it is microstructure noise between two claims on the SAME
+    # underlying (fungible share classes, an ETF vs a near-identical index ETF:
+    # IVV/SPLG both track the S&P 500, half-life 0.5d, hedge_ratio == price
+    # ratio). Such pairs pass every statistical gate (p<1e-4, OOS-stationary) yet
+    # are arbitrage-locked: the round-trip bid/ask exceeds a spread that closes
+    # intraday, so there is no capturable edge. Override QUEUE_OK to DO_NOT_QUEUE.
+    try:
+        _hl = result.get("details", {}).get("in_sample", {}).get("half_life_days")
+    except Exception:
+        _hl = None
+    if _hl is not None and _hl < 1.5:
+        summary["half_life_days"] = _hl
+        if summary.get("queue_recommendation") == "QUEUE_OK":
+            summary["queue_recommendation"] = "DO_NOT_QUEUE"
+        summary["queue_guard_reason"] = (
+            f"Half-life {_hl}d < 1.5d: spread reverts intraday -> same-underlying/"
+            "microstructure (e.g. dual share classes, same-index ETFs), "
+            "arbitrage-locked and untradeable after costs. Record as "
+            "DEAD_END_COINTEGRATION_INTRADAY_HALFLIFE instead of queuing."
+        )
+
     result_id = _store_result("cointegration", params, result, json.dumps(summary, default=str))
     summary["result_id"] = result_id
     print(json.dumps(summary, indent=2, default=str))
