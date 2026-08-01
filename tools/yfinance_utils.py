@@ -38,11 +38,103 @@ Usage examples:
 
 from __future__ import annotations
 
+import os
 import sys
 from typing import Union
 
 import pandas as pd
 import yfinance as yf
+
+
+# ---------------------------------------------------------------------------
+# Tiingo historical fallback
+# ---------------------------------------------------------------------------
+# yfinance is frequently reset by the egress proxy on fresh clones (curl (35)
+# "Recv failure: Connection reset by peer"). Tiingo's authenticated EOD API is
+# reliable for US equities/ETFs behind the proxy. These helpers let
+# safe_download() / get_close_prices() fall back to Tiingo transparently.
+# Tiingo does NOT cover indices (^VIX), futures (CL=F) or FRED series — those
+# still raise, which is the documented (note #2) limitation.
+
+def _tiingo_history(ticker: str, start: str, end: str,
+                    auto_adjust: bool = True) -> pd.DataFrame:
+    """
+    Fetch daily OHLCV history for a single ticker from Tiingo.
+
+    Returns a DataFrame indexed by DatetimeIndex with flat columns
+    Open, High, Low, Close, Volume (split/dividend-adjusted when
+    auto_adjust=True, matching yfinance's default). Returns an EMPTY
+    DataFrame if Tiingo has no data or no key is configured.
+    """
+    import requests
+
+    key = os.environ.get("TIINGO_API_KEY", "")
+    if not key:
+        return pd.DataFrame()
+
+    headers = {"Content-Type": "application/json",
+               "Authorization": f"Token {key}"}
+    url = f"https://api.tiingo.com/tiingo/daily/{ticker}/prices"
+    try:
+        r = requests.get(url, params={"startDate": start, "endDate": end},
+                         headers=headers, timeout=20)
+    except Exception:
+        return pd.DataFrame()
+    if r.status_code != 200:
+        return pd.DataFrame()
+    data = r.json()
+    if not data:
+        return pd.DataFrame()
+
+    df = pd.DataFrame(data)
+    df["date"] = pd.to_datetime(df["date"]).dt.tz_localize(None)
+    df = df.set_index("date").sort_index()
+
+    if auto_adjust:
+        cols = {"adjOpen": "Open", "adjHigh": "High", "adjLow": "Low",
+                "adjClose": "Close", "adjVolume": "Volume"}
+    else:
+        cols = {"open": "Open", "high": "High", "low": "Low",
+                "close": "Close", "volume": "Volume"}
+    # Fall back to unadjusted names if adjusted are missing
+    out = pd.DataFrame(index=df.index)
+    for src, dst in cols.items():
+        if src in df.columns:
+            out[dst] = df[src]
+        elif dst.lower() in df.columns:
+            out[dst] = df[dst.lower()]
+    return out.dropna(how="all")
+
+
+def _tiingo_download(tickers: list[str], start: str, end: str,
+                     auto_adjust: bool = True) -> pd.DataFrame:
+    """
+    Multi-ticker Tiingo fetch shaped like yf.download() output.
+
+    Single ticker  -> flat columns Open, High, Low, Close, Volume
+    Multiple tickers -> MultiIndex columns (metric, ticker), matching
+    the structure flatten_yfinance_columns() expects. Returns an empty
+    DataFrame if none of the tickers resolved.
+    """
+    frames = {}
+    for t in tickers:
+        h = _tiingo_history(t, start, end, auto_adjust=auto_adjust)
+        if h is not None and not h.empty:
+            frames[t] = h
+    if not frames:
+        return pd.DataFrame()
+
+    if len(tickers) == 1 and tickers[0] in frames:
+        return frames[tickers[0]]
+
+    # Build MultiIndex (metric, ticker) like yfinance multi-ticker output
+    pieces = []
+    for t, h in frames.items():
+        h2 = h.copy()
+        h2.columns = pd.MultiIndex.from_product([h2.columns, [t]])
+        pieces.append(h2)
+    combined = pd.concat(pieces, axis=1).sort_index()
+    return combined
 
 
 # ---------------------------------------------------------------------------
@@ -147,13 +239,25 @@ def safe_download(
     kwargs.setdefault("auto_adjust", True)
 
     single = isinstance(tickers, str)
-    raw = yf.download(tickers, start=start, end=end, **kwargs)
+    ticker_list = [tickers] if single else list(tickers)
 
-    if raw.empty:
-        ticker_str = tickers if single else ", ".join(tickers)
+    try:
+        raw = yf.download(tickers, start=start, end=end, **kwargs)
+    except Exception:
+        raw = pd.DataFrame()
+
+    if raw is None or raw.empty:
+        # yfinance failed or was proxy-reset — try Tiingo (equities/ETFs only)
+        raw = _tiingo_download(ticker_list, start, end,
+                               auto_adjust=kwargs.get("auto_adjust", True))
+
+    if raw is None or raw.empty:
+        ticker_str = tickers if single else ", ".join(ticker_list)
         raise ValueError(
-            f"yfinance returned no data for {ticker_str!r} "
-            f"from {start} to {end}. Ticker may be delisted or invalid."
+            f"No data for {ticker_str!r} from {start} to {end} "
+            "(yfinance empty/proxy-reset and Tiingo fallback found nothing; "
+            "note Tiingo does not cover indices/futures/FRED). "
+            "Ticker may be delisted or invalid."
         )
 
     ticker_hint = tickers if single else None
@@ -202,12 +306,21 @@ def get_close_prices(
     single = isinstance(tickers, str)
     ticker_list = [tickers] if single else list(tickers)
 
-    raw = yf.download(ticker_list, start=start, end=end, **kwargs)
+    try:
+        raw = yf.download(ticker_list, start=start, end=end, **kwargs)
+    except Exception:
+        raw = pd.DataFrame()
 
-    if raw.empty:
+    if raw is None or raw.empty:
+        # yfinance failed or was proxy-reset — try Tiingo (equities/ETFs only)
+        raw = _tiingo_download(ticker_list, start, end,
+                               auto_adjust=kwargs.get("auto_adjust", True))
+
+    if raw is None or raw.empty:
         raise ValueError(
-            f"yfinance returned no data for {ticker_list} "
-            f"from {start} to {end}."
+            f"No data for {ticker_list} from {start} to {end} "
+            "(yfinance empty/proxy-reset and Tiingo fallback found nothing; "
+            "note Tiingo does not cover indices/futures/FRED)."
         )
 
     if isinstance(raw.columns, pd.MultiIndex):
