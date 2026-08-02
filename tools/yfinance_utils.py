@@ -105,6 +105,55 @@ def flatten_yfinance_columns(df: pd.DataFrame, ticker: str | None = None) -> pd.
     return df
 
 
+def _tiingo_history(ticker: str, start: str, end: str) -> pd.DataFrame | None:
+    """
+    Fetch daily OHLCV from the Tiingo REST API as a fallback when yfinance is
+    unreachable (the recurring fresh-clone friction: the egress proxy resets
+    curl_cffi TLS, so yf.download() returns empty for every ticker).
+
+    Returns a flat-column DataFrame (Open, High, Low, Close, Volume) with a
+    tz-naive DatetimeIndex, split/dividend-adjusted to match yfinance
+    auto_adjust=True. Returns None when the key is missing, the symbol is not a
+    plain equity/ETF (indices ^VIX, futures CL=F, FX EURUSD=X, FRED series are
+    not on Tiingo's daily endpoint), or Tiingo has no data.
+    """
+    import os
+    import requests
+
+    key = os.environ.get("TIINGO_API_KEY", "")
+    if not key:
+        return None
+    # Tiingo daily covers US equities/ETFs only — skip indices/futures/FX/FRED.
+    if any(c in ticker for c in ("^", "=", ":")):
+        return None
+    try:
+        headers = {"Content-Type": "application/json",
+                   "Authorization": f"Token {key}"}
+        url = f"https://api.tiingo.com/tiingo/daily/{ticker}/prices"
+        r = requests.get(url, params={"startDate": start, "endDate": end},
+                         headers=headers, timeout=20)
+        if r.status_code != 200:
+            return None
+        data = r.json()
+    except Exception:
+        return None
+    if not data:
+        return None
+
+    df = pd.DataFrame(data)
+    df["date"] = pd.to_datetime(df["date"]).dt.tz_localize(None)
+    df = df.set_index("date").sort_index()
+    out = pd.DataFrame({
+        "Open": df["adjOpen"],
+        "High": df["adjHigh"],
+        "Low": df["adjLow"],
+        "Close": df["adjClose"],
+        "Volume": df["adjVolume"],
+    })
+    out.index.name = None
+    return out
+
+
 def safe_download(
     tickers: Union[str, list[str]],
     start: str,
@@ -147,9 +196,24 @@ def safe_download(
     kwargs.setdefault("auto_adjust", True)
 
     single = isinstance(tickers, str)
-    raw = yf.download(tickers, start=start, end=end, **kwargs)
+    ticker_list = [tickers] if single else list(tickers)
+    try:
+        raw = yf.download(tickers, start=start, end=end, **kwargs)
+    except Exception:
+        raw = pd.DataFrame()
 
-    if raw.empty:
+    if raw is None or raw.empty:
+        # yfinance unreachable (proxy TLS reset) — fall back to Tiingo per ticker.
+        frames = {t: _tiingo_history(t, start, end) for t in ticker_list}
+        frames = {t: h for t, h in frames.items() if h is not None and not h.empty}
+        if frames:
+            if single:
+                return frames[ticker_list[0]]
+            out = pd.DataFrame()
+            for t, h in frames.items():
+                for col in h.columns:
+                    out[f"{col}_{t}"] = h[col]
+            return out.dropna(how="all")
         ticker_str = tickers if single else ", ".join(tickers)
         raise ValueError(
             f"yfinance returned no data for {ticker_str!r} "
@@ -202,44 +266,60 @@ def get_close_prices(
     single = isinstance(tickers, str)
     ticker_list = [tickers] if single else list(tickers)
 
-    raw = yf.download(ticker_list, start=start, end=end, **kwargs)
+    try:
+        raw = yf.download(ticker_list, start=start, end=end, **kwargs)
+    except Exception:
+        raw = pd.DataFrame()
 
-    if raw.empty:
+    close_df = None
+    if raw is not None and not raw.empty:
+        if isinstance(raw.columns, pd.MultiIndex):
+            # Extract only the Close row from MultiIndex (level 0 = metric)
+            # Works for both single-ticker and multi-ticker in yfinance 1.x
+            try:
+                close_df = raw.xs("Close", level=0, axis=1)
+            except KeyError:
+                # Fallback: try level 1 ordering (older yfinance)
+                level0 = raw.columns.get_level_values(0)
+                level1 = raw.columns.get_level_values(1)
+                if "Close" in level0.unique():
+                    mask = level0 == "Close"
+                    close_df = raw.loc[:, mask]
+                    close_df.columns = level1[mask]
+                else:
+                    raise ValueError(
+                        "Cannot find 'Close' column in yfinance output. "
+                        f"Available level-0 values: {list(level0.unique())}"
+                    )
+        else:
+            # Flat columns — just grab Close
+            if "Close" not in raw.columns:
+                raise ValueError(
+                    f"'Close' column missing. Available columns: {list(raw.columns)}"
+                )
+            close_df = raw[["Close"]].copy()
+            close_df.columns = ticker_list
+
+    # Fill any tickers yfinance could not return (or all of them, when the
+    # proxy reset yfinance entirely) from the Tiingo REST fallback.
+    have = set(close_df.columns) if close_df is not None else set()
+    missing = [t for t in ticker_list if t not in have]
+    for t in missing:
+        h = _tiingo_history(t, start, end)
+        if h is not None and not h.empty:
+            if close_df is None:
+                close_df = pd.DataFrame(index=h.index)
+            close_df[t] = h["Close"]
+
+    if close_df is None or close_df.dropna(how="all").empty:
         raise ValueError(
             f"yfinance returned no data for {ticker_list} "
             f"from {start} to {end}."
         )
 
-    if isinstance(raw.columns, pd.MultiIndex):
-        # Extract only the Close row from MultiIndex (level 0 = metric)
-        # Works for both single-ticker and multi-ticker in yfinance 1.x
-        try:
-            close_df = raw.xs("Close", level=0, axis=1)
-        except KeyError:
-            # Fallback: try level 1 ordering (older yfinance)
-            level0 = raw.columns.get_level_values(0)
-            level1 = raw.columns.get_level_values(1)
-            if "Close" in level0.unique():
-                mask = level0 == "Close"
-                close_df = raw.loc[:, mask]
-                close_df.columns = level1[mask]
-            else:
-                raise ValueError(
-                    "Cannot find 'Close' column in yfinance output. "
-                    f"Available level-0 values: {list(level0.unique())}"
-                )
-    else:
-        # Flat columns — just grab Close
-        if "Close" not in raw.columns:
-            raise ValueError(
-                f"'Close' column missing. Available columns: {list(raw.columns)}"
-            )
-        close_df = raw[["Close"]].copy()
-        close_df.columns = ticker_list
-
-    # Ensure column names match the requested tickers
-    # xs() preserves ticker names from level 1, which is what we want
-    return close_df.dropna(how="all")
+    # Preserve requested column order where available.
+    cols = [t for t in ticker_list if t in close_df.columns]
+    return close_df[cols].dropna(how="all")
 
 
 def get_current_price(ticker: str) -> float:
