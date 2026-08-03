@@ -105,6 +105,84 @@ def flatten_yfinance_columns(df: pd.DataFrame, ticker: str | None = None) -> pd.
     return df
 
 
+# ---------------------------------------------------------------------------
+# Tiingo historical fallback
+# ---------------------------------------------------------------------------
+# yfinance's egress often gets TLS-reset by the agent proxy on fresh clones
+# (recurring #1 data_access friction, 139x). Tiingo (authenticated EOD) is a
+# reliable daily-bar fallback for equities/ETFs. These helpers mirror the
+# yfinance output shapes so callers need no special-casing.
+
+def _tiingo_history(ticker: str, start: str, end: str) -> pd.DataFrame:
+    """Fetch daily adjusted OHLCV from Tiingo for one ticker.
+
+    Returns a DataFrame indexed by tz-naive normalized date with columns
+    Open, High, Low, Close, Volume (split/dividend-adjusted). Returns an empty
+    DataFrame on any failure (no key, network error, unknown ticker, index).
+    """
+    import os
+    import requests
+
+    key = os.environ.get("TIINGO_API_KEY", "")
+    if not key:
+        return pd.DataFrame()
+    try:
+        url = f"https://api.tiingo.com/tiingo/daily/{ticker}/prices"
+        headers = {"Content-Type": "application/json",
+                   "Authorization": f"Token {key}"}
+        r = requests.get(url, params={"startDate": start, "endDate": end},
+                         headers=headers, timeout=15)
+        if r.status_code != 200:
+            return pd.DataFrame()
+        data = r.json()
+        if not data:
+            return pd.DataFrame()
+        raw = pd.DataFrame(data)
+        idx = pd.to_datetime(raw["date"]).dt.tz_localize(None).dt.normalize()
+        out = pd.DataFrame({
+            "Open": raw.get("adjOpen", raw.get("open")).to_numpy(),
+            "High": raw.get("adjHigh", raw.get("high")).to_numpy(),
+            "Low": raw.get("adjLow", raw.get("low")).to_numpy(),
+            "Close": raw.get("adjClose", raw.get("close")).to_numpy(),
+            "Volume": raw.get("adjVolume", raw.get("volume")).to_numpy(),
+        }, index=idx)
+        out.index.name = None
+        return out.sort_index()
+    except Exception:
+        return pd.DataFrame()
+
+
+def _tiingo_safe_download(ticker_list: list[str], start: str, end: str,
+                          single: bool) -> pd.DataFrame:
+    """Tiingo fallback shaped like safe_download() output (flat columns)."""
+    frames = {}
+    for t in ticker_list:
+        h = _tiingo_history(t, start, end)
+        if not h.empty:
+            frames[t] = h
+    if not frames:
+        return pd.DataFrame()
+    if single:
+        return frames[ticker_list[0]]
+    cols = {}
+    for t, h in frames.items():
+        for metric in ("Open", "High", "Low", "Close", "Volume"):
+            cols[f"{metric}_{t}"] = h[metric]
+    return pd.DataFrame(cols).sort_index()
+
+
+def _tiingo_closes(ticker_list: list[str], start: str, end: str) -> pd.DataFrame:
+    """Tiingo fallback shaped like get_close_prices() output (ticker columns)."""
+    cols = {}
+    for t in ticker_list:
+        h = _tiingo_history(t, start, end)
+        if not h.empty:
+            cols[t] = h["Close"]
+    if not cols:
+        return pd.DataFrame()
+    return pd.DataFrame(cols).sort_index().dropna(how="all")
+
+
 def safe_download(
     tickers: Union[str, list[str]],
     start: str,
@@ -147,9 +225,19 @@ def safe_download(
     kwargs.setdefault("auto_adjust", True)
 
     single = isinstance(tickers, str)
-    raw = yf.download(tickers, start=start, end=end, **kwargs)
+    ticker_list = [tickers] if single else list(tickers)
+    try:
+        raw = yf.download(tickers, start=start, end=end, **kwargs)
+    except Exception:
+        raw = pd.DataFrame()
 
-    if raw.empty:
+    if raw is None or raw.empty:
+        # yfinance failed (e.g. proxy TLS reset on a fresh clone). Fall back to
+        # Tiingo for daily equity/ETF bars. See recurring data_access friction.
+        if str(kwargs.get("interval", "1d")) in ("1d", "None"):
+            fb = _tiingo_safe_download(ticker_list, start, end, single)
+            if not fb.empty:
+                return fb
         ticker_str = tickers if single else ", ".join(tickers)
         raise ValueError(
             f"yfinance returned no data for {ticker_str!r} "
@@ -202,9 +290,18 @@ def get_close_prices(
     single = isinstance(tickers, str)
     ticker_list = [tickers] if single else list(tickers)
 
-    raw = yf.download(ticker_list, start=start, end=end, **kwargs)
+    try:
+        raw = yf.download(ticker_list, start=start, end=end, **kwargs)
+    except Exception:
+        raw = pd.DataFrame()
 
-    if raw.empty:
+    if raw is None or raw.empty:
+        # yfinance failed (e.g. proxy TLS reset on a fresh clone). Fall back to
+        # Tiingo for daily equity/ETF closes. See recurring data_access friction.
+        if str(kwargs.get("interval", "1d")) in ("1d", "None"):
+            fb = _tiingo_closes(ticker_list, start, end)
+            if not fb.empty:
+                return fb[[c for c in ticker_list if c in fb.columns]]
         raise ValueError(
             f"yfinance returned no data for {ticker_list} "
             f"from {start} to {end}."
