@@ -133,31 +133,40 @@ def search_item_105(start_date: str, end_date: str) -> list[dict]:
 
 
 def filter_largecap(events: list[dict]) -> list[dict]:
-    """Filter to large-cap stocks (>$500M market cap)."""
-    if yf is None:
-        print("yfinance not available, skipping market cap filter", file=sys.stderr)
-        return [e for e in events if e.get("ticker")]
+    """Filter to large-cap stocks (>$500M market cap).
+
+    Uses the robust get_market_cap (yfinance -> Tiingo fundamentals fallback)
+    so the gate survives a yfinance outage. A cap of None means BOTH sources
+    failed: the ticker is kept and flagged cap_unknown=True rather than silently
+    dropped, so an unknown-cap mega-cap (e.g. AMGN 2026-08-03) is never masked.
+    """
+    from tools.yfinance_utils import get_market_cap
 
     filtered = []
     tickers = list(set(e["ticker"] for e in events if e.get("ticker")))
 
     for i, tick in enumerate(tickers):
-        try:
-            info = yf.Ticker(tick).info
-            mcap = info.get("marketCap", 0) or 0
-            if mcap >= MIN_MARKET_CAP:
-                for e in events:
-                    if e.get("ticker") == tick:
-                        e["market_cap"] = mcap
-                        filtered.append(e)
-            else:
-                print(f"  Filtered out {tick}: market cap ${mcap/1e6:.0f}M < $500M", file=sys.stderr)
-        except Exception as ex:
-            print(f"  Error checking {tick}: {ex}", file=sys.stderr)
+        mcap = get_market_cap(tick)
+        if mcap is None:
+            # Unknown cap — do NOT silently drop; surface for manual review.
+            print(f"  WARNING {tick}: market cap unknown (yfinance+Tiingo both "
+                  f"failed) -- keeping, flagged cap_unknown", file=sys.stderr)
+            for e in events:
+                if e.get("ticker") == tick:
+                    e["market_cap"] = None
+                    e["cap_unknown"] = True
+                    filtered.append(e)
+        elif mcap >= MIN_MARKET_CAP:
+            for e in events:
+                if e.get("ticker") == tick:
+                    e["market_cap"] = mcap
+                    filtered.append(e)
+        else:
+            print(f"  Filtered out {tick}: market cap ${mcap/1e6:.0f}M < $500M", file=sys.stderr)
 
         if (i + 1) % 10 == 0:
             print(f"  Market cap check: {i+1}/{len(tickers)}", file=sys.stderr)
-        time.sleep(0.2)
+        time.sleep(0.1)
 
     return filtered
 

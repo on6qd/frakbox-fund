@@ -39,7 +39,7 @@ Usage examples:
 from __future__ import annotations
 
 import sys
-from typing import Union
+from typing import Optional, Union
 
 import pandas as pd
 import yfinance as yf
@@ -181,6 +181,49 @@ def _tiingo_closes(ticker_list: list[str], start: str, end: str) -> pd.DataFrame
     if not cols:
         return pd.DataFrame()
     return pd.DataFrame(cols).sort_index().dropna(how="all")
+
+
+def get_market_cap(ticker: str) -> Optional[float]:
+    """Return market cap (raw USD) for a ticker, with a Tiingo fallback.
+
+    Tries yfinance's Ticker().info first; if that fails (e.g. proxy TLS reset
+    on a fresh clone, the recurring #1 data_access friction) it falls back to
+    Tiingo's fundamentals/daily endpoint. Returns None only when BOTH sources
+    fail — callers must distinguish None (unknown, verify manually) from a real
+    small cap, and must NOT silently treat None as "not large-cap". A silent
+    None once masked a live AMGN mega-cap cybersecurity-8K GO (2026-08-03).
+    """
+    try:
+        info = yf.Ticker(ticker).info
+        mc = info.get("marketCap")
+        if mc:
+            return float(mc)
+    except Exception:
+        pass
+    # Fallback: Tiingo fundamentals daily
+    import os
+    import requests
+    key = os.environ.get("TIINGO_API_KEY", "")
+    if not key:
+        return None
+    try:
+        from datetime import datetime, timedelta
+        end_d = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+        start_d = (datetime.now() - timedelta(days=20)).strftime("%Y-%m-%d")
+        url = f"https://api.tiingo.com/tiingo/fundamentals/{ticker}/daily"
+        headers = {"Content-Type": "application/json",
+                   "Authorization": f"Token {key}"}
+        r = requests.get(url, params={"startDate": start_d, "endDate": end_d},
+                         headers=headers, timeout=15)
+        if r.status_code == 200:
+            data = r.json()
+            if isinstance(data, list) and data:
+                mc = data[-1].get("marketCap")
+                if mc:
+                    return float(mc)
+    except Exception:
+        pass
+    return None
 
 
 def safe_download(
