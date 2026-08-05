@@ -113,6 +113,7 @@ def safe_download(
 ) -> pd.DataFrame:
     """
     Download OHLCV data from yfinance with automatic MultiIndex flattening.
+    Falls back to Tiingo if yfinance fails or is rate-limited.
 
     Wraps yf.download() and guarantees a clean, flat-column DataFrame regardless
     of yfinance version or number of tickers.
@@ -147,17 +148,73 @@ def safe_download(
     kwargs.setdefault("auto_adjust", True)
 
     single = isinstance(tickers, str)
-    raw = yf.download(tickers, start=start, end=end, **kwargs)
+    try:
+        raw = yf.download(tickers, start=start, end=end, **kwargs)
+        if raw.empty:
+            raise ValueError("yfinance returned empty")
+        ticker_hint = tickers if single else None
+        return flatten_yfinance_columns(raw, ticker=ticker_hint)
+    except Exception as yf_error:
+        # Fallback to Tiingo if yfinance fails (rate limit, network, etc.)
+        import os
+        import requests
+        from datetime import datetime
 
-    if raw.empty:
-        ticker_str = tickers if single else ", ".join(tickers)
-        raise ValueError(
-            f"yfinance returned no data for {ticker_str!r} "
-            f"from {start} to {end}. Ticker may be delisted or invalid."
-        )
+        tiingo_key = os.environ.get("TIINGO_API_KEY")
+        if not tiingo_key:
+            ticker_str = tickers if single else ", ".join(tickers)
+            raise ValueError(
+                f"yfinance failed for {ticker_str!r} from {start} to {end}. "
+                f"Ticker may be delisted or invalid. No Tiingo API key available."
+            )
 
-    ticker_hint = tickers if single else None
-    return flatten_yfinance_columns(raw, ticker=ticker_hint)
+        ticker_list = [tickers] if single else list(tickers)
+        headers = {"Content-Type": "application/json", "Authorization": f"Token {tiingo_key}"}
+
+        # Fetch from Tiingo for each ticker
+        dfs = []
+        for ticker in ticker_list:
+            try:
+                url = f"https://api.tiingo.com/tiingo/daily/{ticker}/prices"
+                r = requests.get(url, params={"startDate": start, "endDate": end},
+                                headers=headers, timeout=10)
+                if r.status_code == 200:
+                    data = r.json()
+                    if data:
+                        # Convert Tiingo format to DataFrame
+                        tiingo_df = pd.DataFrame(data)
+                        tiingo_df["date"] = pd.to_datetime(tiingo_df["date"]).dt.tz_localize(None)
+                        tiingo_df = tiingo_df.set_index("date")
+                        # Map Tiingo columns to standard OHLCV
+                        tiingo_df = tiingo_df[["adjOpen", "adjHigh", "adjLow", "adjClose", "adjVolume"]].copy()
+                        tiingo_df.columns = ["Open", "High", "Low", "Close", "Volume"]
+                        tiingo_df.index.name = None
+                        dfs.append((ticker, tiingo_df))
+            except Exception:
+                pass
+
+        if not dfs:
+            ticker_str = ", ".join(ticker_list)
+            raise ValueError(
+                f"Both yfinance and Tiingo failed for {ticker_str!r} "
+                f"from {start} to {end}. Tickers may be delisted or invalid."
+            )
+
+        # Merge DataFrames if multiple tickers
+        if single:
+            return dfs[0][1]
+        else:
+            merged = dfs[0][1].copy()
+            for ticker, df in dfs[1:]:
+                # Rename columns to ticker_metric format
+                df_renamed = df.copy()
+                df_renamed.columns = [f"{col}_{ticker}" for col in df.columns]
+                merged = merged.join(df_renamed)
+            # Rename first ticker's columns
+            first_ticker = dfs[0][0]
+            cols_to_rename = {col: f"{col}_{first_ticker}" for col in merged.columns}
+            merged = merged.rename(columns=cols_to_rename)
+            return merged
 
 
 def get_close_prices(
