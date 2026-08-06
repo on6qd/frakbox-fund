@@ -333,6 +333,21 @@ def search_item_301(start_date: str, end_date: str) -> list[dict]:
         if items and not has_301:
             continue
 
+        # Always-on structural M&A exclusion (added 2026-08-06 for the EA gap).
+        # An Item 3.01 that co-occurs with Item 2.01 (Completion of Acquisition)
+        # or Item 5.01 (Change in Control) is a completed merger / going-private
+        # delisting: the stock is pinned to the deal price and then ceases
+        # trading — it is NOT a distress short. The prior text-level guard in
+        # classify_filing_content() only ran under --classify/--forced-only, so
+        # the default daily scan surfaced EA (Electronic Arts, $210 LBO) as a
+        # false-positive GO. Filtering on the EFTS items metadata here makes the
+        # exclusion unconditional and costs no extra fetch.
+        items_str = " ".join(str(it) for it in items)
+        if items and (
+            re.search(r"\b2\.01\b", items_str) or re.search(r"\b5\.01\b", items_str)
+        ):
+            continue
+
         cik = ciks[0].lstrip("0") if ciks else ""
         dedup_key = (cik, file_date)
         if dedup_key in seen:
