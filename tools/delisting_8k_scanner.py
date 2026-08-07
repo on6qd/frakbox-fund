@@ -333,6 +333,19 @@ def search_item_301(start_date: str, end_date: str) -> list[dict]:
         if items and not has_301:
             continue
 
+        # ALWAYS-ON going-private / M&A exclusion (metadata level, 2026-08-07).
+        # EDGAR's structured `items` list is authoritative — when Item 3.01
+        # co-files with Item 2.01 (Completion of Acquisition), 5.01 (Change in
+        # Control), or 3.03 (Material Modification to Security Holder Rights),
+        # the delisting is a merger/LBO completion and the stock ceases trading
+        # (UNTRADEABLE). This runs at discovery for EVERY invocation, so a
+        # mega-cap LBO like EA (Electronic Arts $210 buyout, items
+        # 2.01/3.01/3.03/5.01) is dropped even without --classify. Text-regex
+        # co-occurrence in classify_filing_content() missed it because the
+        # fetched primary doc did not surface those item headers to the regex.
+        if any(str(it).strip().startswith(("2.01", "5.01", "3.03")) for it in items):
+            continue
+
         cik = ciks[0].lstrip("0") if ciks else ""
         dedup_key = (cik, file_date)
         if dedup_key in seen:
