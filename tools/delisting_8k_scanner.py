@@ -333,6 +333,21 @@ def search_item_301(start_date: str, end_date: str) -> list[dict]:
         if items and not has_301:
             continue
 
+        # ALWAYS-ON metadata-level going-private / M&A exclusion (2026-08-07):
+        # If the same 8-K co-files Item 2.01 (Completion of Acquisition),
+        # Item 5.01 (Change in Control), or Item 3.03 (Material Modification
+        # to Rights of Security Holders) alongside 3.01, the stock is ceasing
+        # to trade via merger/LBO — an UNTRADEABLE going-private event, not a
+        # forced-delisting short. This fires from the EDGAR items metadata
+        # BEFORE any text fetch, so it can't be masked by a silent yfinance
+        # failure or an unfetched body. Root cause: EA ($210B LBO) surfaced as
+        # a large-cap short GO. See delisting_8k_going_private_metadata_exclusion.
+        if items and any(
+            any(code in str(it) for it in items)
+            for code in ("2.01", "5.01", "3.03")
+        ):
+            continue
+
         cik = ciks[0].lstrip("0") if ciks else ""
         dedup_key = (cik, file_date)
         if dedup_key in seen:
