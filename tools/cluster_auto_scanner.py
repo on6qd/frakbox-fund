@@ -794,12 +794,32 @@ def scan(hours: int = 48, dry_run: bool = False, verbose: bool = True) -> list[d
         # Get 52W position
         pos_52w = get_52w_position(ticker)
 
+        # Fetch recent history once — used for both the IPO/new-listing gate and
+        # the prior-drawdown feature.
+        hist = None
+        hist_ok = False
+        try:
+            from tools.yfinance_utils import safe_download
+            hist = safe_download(ticker, start=(datetime.now() - timedelta(days=40)).strftime('%Y-%m-%d'),
+                                 end=datetime.now().strftime('%Y-%m-%d'))
+            hist_ok = hist is not None
+        except Exception:
+            hist_ok = False  # network/other error — fail open, do not gate
+
+        # IPO / recent-listing gate: a stock with <20 trading days has no valid 52W
+        # baseline, and its insider "cluster" is listing-related (founders/directors
+        # buying at the offering), not the validated informational signal. Mirrors
+        # insider_cluster_evaluator.py's <20-trading-day block. Only gate when we
+        # actually observed a short history (fail open on fetch errors).
+        # Ref: BRVE 2026-08-10 — 2 trading days, wrongly queued P0; hmh SKIP_IPO.
+        if hist_ok and len(hist) < 20:
+            if verbose:
+                print(f"  SKIP: {ticker} only {len(hist)} trading days — recent IPO/listing, no 52W baseline")
+            continue
+
         # Check prior 20-day drawdown (feature analysis: >10% drawdown = +4.55% avg vs +3.52%)
         prior_drawdown = None
         try:
-            from tools.yfinance_utils import safe_download
-            hist = safe_download(ticker, start=(datetime.now() - timedelta(days=35)).strftime('%Y-%m-%d'),
-                                 end=datetime.now().strftime('%Y-%m-%d'))
             if hist is not None and len(hist) >= 20:
                 close = hist['Close'].iloc[-20:]
                 prior_drawdown = round((float(close.iloc[-1]) / float(close.iloc[0]) - 1) * 100, 1)
