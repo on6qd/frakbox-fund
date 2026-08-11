@@ -201,6 +201,59 @@ def is_periodic_delinquency(snippet: str) -> bool:
     return has_ref and has_action
 
 
+# Governance / board-composition cure notices (added 2026-08-11 after ROAD).
+# An Item 3.01 filed because the board or a committee fell out of the required
+# composition (e.g. an independent audit-committee director died/resigned, so
+# the audit committee dropped below three independent members under Nasdaq Rule
+# 5605(c)(2), or the board lost its independent majority under 5605(b), or the
+# compensation committee under 5605(d); NYSE Section 303A) is a GOVERNANCE
+# TECHNICALITY, not a distress delisting. These come with a long cure period
+# (typically the next annual meeting) and are routinely resolved by appointing a
+# director — the stock keeps trading normally with NO forced-selling mechanism.
+# ROAD 2026-08-10 (director death -> audit committee reduced to two) surfaced as
+# a large-cap Item 3.01 GO candidate; it is a NO-GO for the delisting short.
+# Rule 5605 / 303A are governance rules, categorically distinct from the
+# market-based continued-listing standards (min bid price 5550(a)(2), market
+# value 5450(b), stockholders equity 5550(b)) that drive the validated short.
+GOVERNANCE_RULE_TOKENS = [
+    "5605",        # Nasdaq corporate governance (board independence / audit / comp committee)
+    "303a",        # NYSE corporate governance standards
+    "303.00a",
+]
+GOVERNANCE_COMMITTEE_REFS = [
+    "audit committee",
+    "compensation committee",
+    "nominating committee",
+    "majority of independent directors",
+    "majority independent board",
+    "majority of the board be independent",
+]
+GOVERNANCE_CURE_REFS = [
+    "cure period",
+    "reestablish compliance",
+    "re-establish compliance",
+    "regain compliance",
+    "rely on the cure",
+]
+
+
+def is_governance_cure(snippet: str) -> bool:
+    """True if the Item 3.01 is a board/committee-composition non-compliance
+    with a cure period (Nasdaq Rule 5605 / NYSE 303A) — a governance
+    technicality, NOT a distress delisting. Non-tradeable (NO-GO)."""
+    has_rule = any(t in snippet for t in GOVERNANCE_RULE_TOKENS)
+    has_committee = any(t in snippet for t in GOVERNANCE_COMMITTEE_REFS)
+    has_cure = any(t in snippet for t in GOVERNANCE_CURE_REFS)
+    # An explicit 5605/303A governance rule plus any committee or cure context.
+    if has_rule and (has_committee or has_cure):
+        return True
+    # Fallback when the rule number is absent: a committee-composition breach
+    # described in prose together with a cure reference.
+    if has_committee and has_cure:
+        return True
+    return False
+
+
 def classify_filing_content(text: str) -> str:
     """
     Classify Item 3.01 filing as 'forced', 'voluntary', or 'unknown'
@@ -250,6 +303,15 @@ def classify_filing_content(text: str) -> str:
     snippet_wide = text_lower[idx: idx + 3000]
     if is_periodic_delinquency(snippet_wide):
         return "periodic_delinquency"
+
+    # Check governance / board-composition cure notices (Nasdaq Rule 5605 /
+    # NYSE 303A) BEFORE voluntary AND forced. These match the header boilerplate
+    # ("...transfer of listing") as 'voluntary' and the committee tokens
+    # ("audit committee requirement", "independent director requirement") as
+    # 'forced', but are actually a governance technicality with a long cure
+    # period and no forced-selling mechanism — non-tradeable (ROAD 2026-08-10).
+    if is_governance_cure(snippet_wide):
+        return "governance_cure"
 
     # Check voluntary transfer/withdrawal (may continue trading on OTC)
     for pat in VOLUNTARY_PATTERNS:
@@ -649,9 +711,11 @@ def main():
         voluntary = [e for e in events if e.get("filing_type") == "voluntary"]
         unknown = [e for e in events if e.get("filing_type") == "unknown"]
         periodic = [e for e in events if e.get("filing_type") == "periodic_delinquency"]
+        governance = [e for e in events if e.get("filing_type") == "governance_cure"]
         print(
             f"Classification: {len(forced)} forced, {len(voluntary)} voluntary, "
-            f"{len(periodic)} periodic_delinquency (NO-GO/stale), {len(unknown)} unknown",
+            f"{len(periodic)} periodic_delinquency (NO-GO/stale), "
+            f"{len(governance)} governance_cure (NO-GO), {len(unknown)} unknown",
             file=sys.stderr,
         )
         if periodic:
