@@ -546,6 +546,37 @@ def get_52w_position(ticker: str) -> dict:
         return {}
 
 
+# A brand-new listing (IPO / SPAC / reverse-merger) has no valid 52-week
+# baseline and its price is dominated by IPO/merger dynamics, not the
+# insider-cluster signal (the same contamination the n>=10 tier documents).
+# The whole insider-cluster backtest was on established listings. Require a
+# minimum trailing trading-day history before treating a cluster as tradeable.
+# See BRVE (Braveheart Bio, 2 trading days, reverse merger) queued P0 in error
+# 2026-08-10 with no gate. Fresh-clone code loss keeps re-dropping this gate.
+MIN_TRADING_DAYS_HISTORY = 20
+
+
+def get_trading_days_available(ticker: str, lookback_calendar_days: int = 40) -> int | None:
+    """Count trailing daily bars for a ticker.
+
+    A newly listed ticker returns far fewer bars than the ~27 a normal stock
+    would over the last 40 calendar days. Returns the bar count, or None if the
+    fetch failed (so callers can distinguish "too new" from "unknown").
+    """
+    try:
+        from datetime import date
+        from tools.yfinance_utils import get_close_prices
+
+        end = date.today()
+        start = end - timedelta(days=lookback_calendar_days)
+        closes = get_close_prices(ticker, start.isoformat(), end.isoformat())
+        if closes is None:
+            return None
+        return int(len(closes))
+    except Exception:
+        return None
+
+
 def set_cluster_trigger(ticker: str, hypothesis_id: str = "1cb6140f",
                          position_size: int = 5000, dry_run: bool = False) -> bool:
     """
@@ -632,6 +663,23 @@ def log_opportunity(cluster: dict, market_cap_m: float, position_52w: dict,
             f"(>1bd hard block per insider_cluster_filing_lag_drift + t_plus_1_retirement). "
             f"NO_GO; logging at low priority for informational review only."
         )
+
+    # New-listing gate: a ticker with too little price history (IPO / SPAC /
+    # reverse-merger) has no valid 52W baseline and is out-of-sample for the
+    # insider-cluster signal. Downgrade to informational NO_GO rather than P0.
+    n_trading_days = get_trading_days_available(ticker)
+    is_new_listing = n_trading_days is not None and n_trading_days < MIN_TRADING_DAYS_HISTORY
+    new_listing_note = ""
+    if is_new_listing:
+        new_listing_note = (
+            f" NEW LISTING: only {n_trading_days} trading days of history "
+            f"(< {MIN_TRADING_DAYS_HISTORY}); no valid 52W baseline, out-of-sample for "
+            f"the insider-cluster signal (IPO/SPAC/reverse-merger dynamics dominate). "
+            f"NO_GO; logging at low priority for informational review only."
+        )
+        # Fold into the stale path so priority/qualification downgrade uniformly.
+        is_stale = True
+        stale_note = (stale_note + new_listing_note) if stale_note else new_listing_note
 
     # Build regime-aware action recommendation (n_insiders-aware)
     action_note = get_vix_action_recommendation(vix_regime, n_insiders, total_value_k)
