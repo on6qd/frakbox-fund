@@ -25,6 +25,7 @@ Usage:
 """
 import argparse
 import json
+import os
 import re
 import sys
 import time
@@ -48,6 +49,34 @@ EFTS_PAGE_SIZE = 100
 EFTS_MAX_RESULTS = 1000  # EFTS hard limit
 
 
+def _get_with_retry(url, retries=4, backoff=2.0):
+    """GET with exponential backoff over transient proxy/network failures.
+
+    The cloud egress proxy intermittently answers 503 to EDGAR CONNECTs
+    (recurring friction). A single ProxyError previously aborted an entire
+    multi-year historical fetch; retry so long backtests survive blips.
+    Returns the Response on success, or None if all attempts fail.
+    """
+    delay = backoff
+    for attempt in range(retries):
+        try:
+            resp = requests.get(url, headers=HEADERS, timeout=30)
+        except requests.exceptions.RequestException as e:
+            if attempt == retries - 1:
+                print(f"  request failed after {retries} attempts: {e}", file=sys.stderr)
+                return None
+            time.sleep(delay)
+            delay *= 2
+            continue
+        # Retry transient server/proxy statuses; return everything else.
+        if resp.status_code in (429, 502, 503, 504) and attempt < retries - 1:
+            time.sleep(delay)
+            delay *= 2
+            continue
+        return resp
+    return None
+
+
 def search_nt_filings(start_date: str, end_date: str, form_type: str = "NT 10-K") -> list[dict]:
     """Search EDGAR EFTS for NT filings in date range.
 
@@ -66,9 +95,10 @@ def search_nt_filings(start_date: str, end_date: str, form_type: str = "NT 10-K"
 
     # First request to get total
     url = base_url + f"&from=0&size={EFTS_PAGE_SIZE}"
-    resp = requests.get(url, headers=HEADERS, timeout=30)
-    if resp.status_code != 200:
-        print(f"EFTS error for {form_type}: {resp.status_code}", file=sys.stderr)
+    resp = _get_with_retry(url)
+    if resp is None or resp.status_code != 200:
+        code = resp.status_code if resp is not None else "no response"
+        print(f"EFTS error for {form_type}: {code}", file=sys.stderr)
         return []
 
     data = resp.json()
@@ -84,9 +114,10 @@ def search_nt_filings(start_date: str, end_date: str, form_type: str = "NT 10-K"
     while fetched < max_to_fetch:
         time.sleep(SEC_DELAY)
         url = base_url + f"&from={fetched}&size={EFTS_PAGE_SIZE}"
-        resp = requests.get(url, headers=HEADERS, timeout=30)
-        if resp.status_code != 200:
-            print(f"  Pagination error at offset {fetched}: {resp.status_code}", file=sys.stderr)
+        resp = _get_with_retry(url)
+        if resp is None or resp.status_code != 200:
+            code = resp.status_code if resp is not None else "no response"
+            print(f"  Pagination error at offset {fetched}: {code}", file=sys.stderr)
             break
         page_hits = resp.json().get("hits", {}).get("hits", [])
         if not page_hits:
