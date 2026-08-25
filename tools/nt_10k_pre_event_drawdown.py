@@ -73,10 +73,19 @@ def bucket_by_pre_return(ret_pct: float) -> str:
 def run_backtest_simple(events: list[dict], label: str) -> dict:
     if not events:
         return {"label": label, "N": 0}
-    bt = [{"symbol": e["ticker"], "date": e["file_date"]} for e in events]
+    # STRICT SCANNER-EXECUTABLE CONVENTION: an NT 10-K appears intraday, so the
+    # earliest tradeable entry is the open the trading day AFTER the filing.
+    # measure_event_impact enters T+1 open only when event_timing="after_hours";
+    # with default timing + entry_price="open" it enters the FILING-DAY open,
+    # which double-counts the unrealizable filing-day move (a same-day-entry
+    # artifact). See event_signal_next_day_open_convention_canonical_rule_2026_08_24
+    # and nt_10k_next_day_open_convention_audit_2026_08_25.
+    bt = [{"symbol": e["ticker"], "date": e["file_date"], "timing": "after_hours"}
+          for e in events]
     try:
         res = market_data.measure_event_impact(
             event_dates=bt, benchmark="SPY", entry_price="open",
+            event_timing="after_hours",
             check_factors=False, check_seasonal=False,
         )
     except Exception as exc:
