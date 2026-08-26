@@ -25,12 +25,18 @@ Usage:
 """
 import argparse
 import json
+import os
 import re
 import sys
 import time
 from datetime import datetime, timedelta
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Import the tools package so its __init__ applies the curl_cffi chrome->safari
+# shim before yfinance constructs any session (this scanner imports yfinance
+# directly, so without this the fetch fails with curl 35 on fresh clones).
+import tools  # noqa: F401
 
 import requests
 
