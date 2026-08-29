@@ -502,6 +502,53 @@ _COMMODITY_SENSITIVE_ETFS = {
 }
 
 
+# FRED macro-economic INDICATOR series (as opposed to market-priced daily
+# series like DGS rates / VIX / DXY, which have their own suppression rules).
+# Granger "lead-lag" of any of these against an equity/sector/index target is a
+# documented systematic dead end per macro_leadlag_to_macro_untradeable_common_shock_rule_2026_07_24
+# (re-confirmed employment_growth_retail_leadlag_scan_hit_dead_end_2026_08_28 and
+# macro_leadlag_target_industrial_production_untradeable_scan_hits_2026_08_27).
+# Root causes, each independently disqualifying: (1) release lag + revisions mean
+# the value is not known at the trade bar the scanner aligns it to; (2) the market
+# prices the SURPRISE at release, so the level/change is already discounted;
+# (3) monthly/weekly macro aggregates sampled against daily equity returns produce
+# common-shock co-movement (both driven by the business cycle), not predictive skill
+# — significance collapses out-of-COVID and the security conversion (FRED index ->
+# tradeable ETF) is null.
+_MACRO_ECONOMIC_FACTORS = {
+    # Employment / labor
+    "PAYEMS", "UNRATE", "ICSA", "CCSA", "CIVPART", "AWHAETP",
+    "CES0500000003", "AHETPI", "EMRATIO", "JTSJOL",
+    # Inflation (aggregate CPI/PPI/PCE indexes — NOT market breakevens)
+    "CPIAUCSL", "CPILFESL", "PPIACO", "PPIFIS", "PPIFES",
+    "PCEPI", "PCEPILFE",
+    # Output / activity
+    "INDPRO", "TCU", "GDP", "GDPC1", "RSAFS", "RRSFS", "MRTSSM44000USS",
+    "DGORDER", "BUSINV", "TOTBUSSMSA",
+    # Housing
+    "HOUST", "PERMIT", "HSN1F", "MORTGAGE30US",
+    # Money / credit aggregates
+    "M2SL", "M1SL", "TOTALSL", "BUSLOANS", "TOTCI",
+    # Sentiment
+    "UMCSENT", "MICH",
+}
+
+
+def _macro_factor_id(factor):
+    """Normalize a factor identifier to its bare FRED series id (strip the
+    optional 'FRED:' prefix, upcase). Returns '' for non-strings."""
+    if not factor:
+        return ""
+    return str(factor).upper().replace("FRED:", "").strip()
+
+
+def _is_macro_economic_factor(factor):
+    """Return True if `factor` is a FRED macro-economic INDICATOR series
+    (payroll, CPI, industrial production, retail sales, housing, money supply,
+    etc.) as opposed to a market-priced daily series."""
+    return _macro_factor_id(factor) in _MACRO_ECONOMIC_FACTORS
+
+
 def _is_dgs_rate_sensitive_pair(factor, target):
     """Return True if this is a DGS rate -> rate-sensitive ETF pair where
     scan hits are known systematic artifacts."""
@@ -965,6 +1012,121 @@ def _check_same_index_or_sector_leadlag_artifact(factor, target):
     return None
 
 
+def _check_macro_economic_leadlag_artifact(factor, target):
+    """Flag FRED macro-economic-indicator -> equity/sector/index lead-lag tests as
+    known-systematic common-shock artifacts per
+    macro_leadlag_to_macro_untradeable_common_shock_rule_2026_07_24.
+
+    Any Granger "lead-lag" from a macro aggregate (payroll, unemployment, CPI, PPI,
+    industrial production, retail sales, housing starts, money supply, mortgage
+    rates, labor-force participation, sentiment) to a tradeable equity target is
+    non-tradeable for three compounding reasons: release lag + revisions (the value
+    is not known at the aligned trade bar), the market prices the surprise at
+    release (level already discounted), and monthly/weekly-vs-daily sampling
+    produces business-cycle common-shock co-movement whose significance vanishes
+    ex-COVID and whose security conversion is null. Re-confirmed
+    employment_growth_retail_leadlag_scan_hit_dead_end_2026_08_28 and
+    macro_leadlag_target_industrial_production_untradeable_scan_hits_2026_08_27.
+
+    Returns a suppression dict, or None if `factor` is not a macro indicator.
+    """
+    if not _is_macro_economic_factor(factor):
+        return None
+    fid = _macro_factor_id(factor)
+    return {
+        "check": "macro_economic_leadlag_common_shock_artifact",
+        "rule": "macro_leadlag_to_macro_untradeable_common_shock_rule_2026_07_24",
+        "suppressed": True,
+        "reason": (
+            f"Macro-economic indicator FRED:{fid} -> {str(target).upper()} lead-lag is a "
+            "documented systematic common-shock artifact. Macro aggregates are released "
+            "with a lag and revised (not known at the aligned trade bar), the market "
+            "prices the surprise at release (level already discounted), and monthly/weekly "
+            "macro sampled against daily equity returns is business-cycle co-movement, not "
+            "predictive skill (significance collapses ex-COVID; FRED-index -> tradeable-ETF "
+            "security conversion is null). DO NOT queue as a tradeable scan hit; record as "
+            "DEAD_END_DUPLICATE_OF_AUDITED_FAMILY."
+        ),
+    }
+
+
+def _check_leadlag_economic_significance(factor, target, result):
+    """Universal economic-significance graduation bar for lead-lag scan hits.
+
+    Applies the canonical bar (leadlag_economic_significance_gate_generalized_2026_06_18)
+    directly to the test result, catching novel pairs that the hardcoded ticker-map
+    cascade (DGS, commodity->sector, same-index/sector, macro-economic) does not
+    enumerate. A lead-lag is SUPPRESSED unless the forward relationship survives with:
+      - not a contemporaneous displacement artifact (spurious_granger False), AND
+      - in-sample Granger p < 0.05, AND
+      - |cross-correlation at the best forward lag| >= 0.05 (economic-significance
+        floor — the forward coefficient must be non-trivial), AND
+      - an out-of-sample split exists AND is Granger-significant (p < 0.05), AND
+      - the best lag is STABLE between IS and OOS (a wandering lag is the classic
+        spurious tell — vix_leadlag_fred_fx_credit_contemporaneous_artifact_rule_2026_07_17).
+
+    test_lead_lag reports xcorr only on the in-sample window, so the IS best-lag
+    xcorr is used as the forward-coefficient proxy and OOS validation rests on the
+    OOS Granger F-test plus lag stability. Returns a dict (never None) so every
+    lead-lag result carries the graduation verdict; `suppressed` is True when the
+    pair fails the bar.
+    """
+    details = result.get("details", {}) if isinstance(result, dict) else {}
+    is_p = result.get("p_value")
+    is_lag = result.get("effect_size")
+    best_lag_xcorr = details.get("best_lag_xcorr")
+    spurious = bool(details.get("spurious_granger"))
+    oos = result.get("oos_result")
+
+    failures = []
+    if spurious:
+        failures.append(
+            f"contemporaneous displacement (spurious Granger): "
+            f"{details.get('spurious_reason') or 'best-lag xcorr trivial vs lag-0'}"
+        )
+    if is_p is None or is_p >= 0.05:
+        failures.append(f"in-sample not significant (p={is_p})")
+    if best_lag_xcorr is None or abs(best_lag_xcorr) < 0.05:
+        failures.append(
+            f"forward correlation below economic-significance floor "
+            f"(|xcorr@lag{is_lag}|={None if best_lag_xcorr is None else round(abs(best_lag_xcorr),4)} < 0.05)"
+        )
+    if not oos:
+        failures.append("no out-of-sample split to validate")
+    else:
+        oos_p = oos.get("p_value")
+        oos_lag = oos.get("best_lag")
+        if oos_p is None or oos_p >= 0.05:
+            failures.append(f"out-of-sample not significant (p={oos_p})")
+        elif oos_lag != is_lag:
+            failures.append(
+                f"lag unstable IS vs OOS (IS lag {is_lag} -> OOS lag {oos_lag}; "
+                f"wandering lag is the classic spurious tell)"
+            )
+
+    graduated = not failures
+    if graduated:
+        reason = (
+            f"Lead-lag {factor} -> {str(target).upper()} PASSES the economic-significance "
+            f"graduation bar (IS p={is_p}, |xcorr@lag{is_lag}|={round(abs(best_lag_xcorr),4)}, "
+            f"OOS Granger-significant at the same lag). Queue-worthy pending canonical "
+            f"threshold/OOS validation."
+        )
+    else:
+        reason = (
+            f"Lead-lag {factor} -> {str(target).upper()} FAILS the economic-significance "
+            f"graduation bar: " + "; ".join(failures) + ". DO NOT queue as a tradeable "
+            f"scan hit (leadlag_economic_significance_gate_generalized_2026_06_18)."
+        )
+    return {
+        "check": "leadlag_economic_significance_graduation_bar",
+        "rule": "leadlag_economic_significance_gate_generalized_2026_06_18",
+        "graduated": graduated,
+        "suppressed": not graduated,
+        "reason": reason,
+    }
+
+
 def cmd_regression(args):
     """Run exposure, lead-lag, or structural break regression test."""
     from tools.timeseries import get_returns, get_aligned_returns
@@ -1010,11 +1172,15 @@ def cmd_regression(args):
         max_lags = args.max_lags or 10
         result = causal_tests.test_lead_lag(factor_rets, target_rets, max_lags=max_lags, oos_start=args.oos_start)
         params["max_lags"] = max_lags
-        # Auto-suppression cascade (first match wins):
+        # Auto-suppression cascade (first hardcoded family match wins):
         #   (a) DGS -> rate-sensitive ETF (documented secular-drift artifact)
         #   (b) Commodity future -> commodity-sensitive ETF (documented Granger artifact)
         #   (c) Same-index / same-sector mechanical inclusion
         #       (XLF->SPY, JPM->XLF, JPM->SPY, KRE->XLF, XLY->XLF, etc.)
+        #   (d) FRED macro-economic indicator -> equity/sector (common-shock artifact)
+        # If no hardcoded family matches, the UNIVERSAL economic-significance
+        # graduation bar (e) is applied to the return data so novel pairs the
+        # ticker-map does not enumerate still get vetted before queuing.
         artifact = _check_dgs_leadlag_artifact(args.factor, args.target)
         if artifact is None:
             # Fall through to commodity -> sector check.
@@ -1022,6 +1188,13 @@ def cmd_regression(args):
         if artifact is None:
             # Fall through to same-index / same-sector mechanical-inclusion check.
             artifact = _check_same_index_or_sector_leadlag_artifact(args.factor, args.target)
+        if artifact is None:
+            # Fall through to FRED macro-economic-indicator common-shock check.
+            artifact = _check_macro_economic_leadlag_artifact(args.factor, args.target)
+        if artifact is None and "error" not in result:
+            # Universal fallback: apply the economic-significance graduation bar
+            # directly to the result (leadlag_economic_significance_gate_generalized_2026_06_18).
+            artifact = _check_leadlag_economic_significance(args.factor, args.target, result)
         if artifact is not None:
             result["scan_artifact_check"] = artifact
             result["scan_artifact_suppressed"] = artifact.get("suppressed", False)

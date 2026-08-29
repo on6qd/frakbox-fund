@@ -38,6 +38,24 @@ try:
 except ImportError:
     HAS_STATSMODELS = False
 
+
+def _granger_tests(test_data, maxlag):
+    """Version-robust wrapper for statsmodels.grangercausalitytests.
+
+    statsmodels 0.15 REMOVED the `verbose` keyword (deprecated in 0.14); our
+    requirement is unpinned (>=0.14.0), so fresh installs pull 0.15 and any call
+    passing verbose=False raises TypeError, breaking every lead_lag/network test.
+    On <0.15 the function prints its per-lag tables to stdout by default, which
+    would corrupt the JSON that data_tasks emits, so we suppress stdout there.
+    This calls WITHOUT verbose (works on 0.15) while redirecting stdout to keep
+    older versions quiet.
+    """
+    import io
+    import contextlib
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        return grangercausalitytests(test_data, maxlag=maxlag)
+
 # Ensure project root is importable
 _project_dir = Path(__file__).parent
 if str(_project_dir) not in sys.path:
@@ -237,7 +255,7 @@ def test_lead_lag(
         # grangercausalitytests expects [y, x] — tests if x Granger-causes y
         test_data = data[["follower", "leader"]].values
         try:
-            results = grangercausalitytests(test_data, maxlag=max_lags, verbose=False)
+            results = _granger_tests(test_data, max_lags)
         except Exception as e:
             return {"error": str(e)}
 
@@ -994,7 +1012,7 @@ def test_network(
         if HAS_STATSMODELS and len(df) >= max_lag + 30:
             try:
                 test_data = df[[spoke, "hub"]].values
-                results = grangercausalitytests(test_data, maxlag=max_lag, verbose=False)
+                results = _granger_tests(test_data, max_lag)
                 best_p = min(results[lag][0]["ssr_ftest"][1] for lag in range(1, max_lag + 1))
                 spoke_results[spoke]["granger_p"] = float(best_p)
                 spoke_results[spoke]["granger_significant"] = float(best_p) < 0.05
