@@ -237,7 +237,7 @@ def test_lead_lag(
         # grangercausalitytests expects [y, x] — tests if x Granger-causes y
         test_data = data[["follower", "leader"]].values
         try:
-            results = grangercausalitytests(test_data, maxlag=max_lags, verbose=False)
+            results = grangercausalitytests(test_data, maxlag=max_lags)
         except Exception as e:
             return {"error": str(e)}
 
@@ -994,7 +994,7 @@ def test_network(
         if HAS_STATSMODELS and len(df) >= max_lag + 30:
             try:
                 test_data = df[[spoke, "hub"]].values
-                results = grangercausalitytests(test_data, maxlag=max_lag, verbose=False)
+                results = grangercausalitytests(test_data, maxlag=max_lag)
                 best_p = min(results[lag][0]["ssr_ftest"][1] for lag in range(1, max_lag + 1))
                 spoke_results[spoke]["granger_p"] = float(best_p)
                 spoke_results[spoke]["granger_significant"] = float(best_p) < 0.05

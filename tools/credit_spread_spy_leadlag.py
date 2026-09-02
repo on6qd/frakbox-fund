@@ -61,7 +61,7 @@ def run_granger(window_df, label):
         print(f"  {label}: too few obs (n={len(series)})")
         return None
     try:
-        results = grangercausalitytests(series, maxlag=MAX_LAGS, verbose=False)
+        results = grangercausalitytests(series, maxlag=MAX_LAGS)
         best = None
         for lag, res in results.items():
             f, p = res[0]['ssr_ftest'][0], res[0]['ssr_ftest'][1]
