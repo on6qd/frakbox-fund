@@ -1,7 +1,7 @@
 ---
 id: IT-2026-0611-insider-cluster-n6to9
-title: Clusters of 6–9 insiders buying predict a 5-day positive drift — validated
-status: validated
+title: Clusters of 6–9 insiders buying predict a 5-day positive drift — RETIRED (transaction-date artifact)
+status: invalidated
 conviction: medium
 asset_class: equity
 universe: [screen:edgar_form4_cluster]
@@ -13,6 +13,21 @@ opened: 2026-06-11
 decided: 2026-06-12
 author: orchestrator
 ---
+
+> **⛔ RETIRED 2026-09-09 — transaction-date-entry artifact (moved to graveyard).**
+> Strict next-day-open convention audit (P9 handoff 0c4058f6, canonical rule
+> `event_signal_next_day_open_convention_canonical_rule_2026_08_24`). The validated
+> +7.80%/5d OOS number was computed with `entry_price="open"` on a `cluster_date` that
+> is the Form-4 **period-of-report (transaction) date**, not the filing date. Using the
+> `insider_cluster_timing_drift` cache (which carries the true filing dates), the n=6–9
+> alpha (2024–2025, n=129, SPY-abnormal) is **+3.15% entirely in the private trans→filing
+> window** and dies by the time a daily scanner can act: **−0.65% (pos 39.5%, p=0.46)
+> entering at filing+1 open** — the only scanner-executable cadence. No pre-cluster
+> leakage (+0.49% p=0.71). This is the same failure that retired the n∈[3,5] band on
+> 2026-04-08 (`insider_cluster_t_plus_1_retirement_2026_04_08`); n∈[6,9] is worse. The
+> mechanism claim below ("entry at the next open after detection still captures the
+> drift") is **falsified**. See KB `insider_cluster_n6to9_transaction_date_entry_artifact_2026_09_09`
+> and rule `form4_entry_must_use_filing_date_not_period_of_report_rule_2026_09_09`.
 
 # Investment Thesis — Clusters of 6–9 insiders buying predict a 5-day positive drift
 

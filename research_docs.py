@@ -105,11 +105,22 @@ def iter_docs():
                 yield folder, path, fm
 
 
-def reindex():
-    """Rebuild the index table from the documents. Returns a per-folder count."""
+def reindex(prune=False):
+    """Upsert the index table from the documents present on disk.
+
+    Non-destructive by default: each scanned markdown file is upserted by its
+    ``id`` (primary key), so running this from a fresh clone that only contains a
+    subset of the pipeline's markdown does NOT wipe the rows for docs whose files
+    are absent (the pipeline docs are not all committed to git, and the index is
+    persisted in Turso). Pass ``prune=True`` only when the full document tree is
+    known to be present locally and you want to drop rows for deleted docs.
+
+    Returns a per-folder count of the docs indexed in this pass.
+    """
     ensure_table()
     conn = db.get_db()
-    conn.execute("DELETE FROM research_docs")
+    if prune:
+        conn.execute("DELETE FROM research_docs")
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     counts = {}
     for folder, path, fm in iter_docs():
@@ -120,6 +131,12 @@ def reindex():
         row["path"] = rel
         row["universe"] = json.dumps(fm.get("universe") or [])
         row["indexed_at"] = now
+        # Coerce DB-unsafe types (e.g. datetime.date from YAML date auto-parsing,
+        # or stray lists/dicts) to strings — the libSQL driver only binds
+        # str/int/float/None/bytes.
+        for k, v in row.items():
+            if v is not None and not isinstance(v, (str, int, float, bytes)):
+                row[k] = v.isoformat() if hasattr(v, "isoformat") else str(v)
         cols = list(row.keys())
         conn.execute(
             f"INSERT OR REPLACE INTO research_docs ({','.join(cols)}) "
@@ -229,7 +246,9 @@ def _cmd_list(args):
 def main(argv=None):
     p = argparse.ArgumentParser(description="Research document index")
     sub = p.add_subparsers(dest="cmd", required=True)
-    sub.add_parser("reindex", help="rebuild the index from research/")
+    rp = sub.add_parser("reindex", help="upsert the index from research/ (non-destructive)")
+    rp.add_argument("--prune", action="store_true",
+                    help="drop rows for docs whose files are absent (only safe with the full tree present)")
     sub.add_parser("validate", help="check folder<->status, ids, links")
     sub.add_parser("summary", help="compact pipeline view")
     lp = sub.add_parser("list", help="list indexed documents")
@@ -237,7 +256,7 @@ def main(argv=None):
     args = p.parse_args(argv)
 
     if args.cmd == "reindex":
-        counts = reindex()
+        counts = reindex(prune=getattr(args, "prune", False))
         total = sum(counts.values())
         print(f"Reindexed {total} documents: " +
               ", ".join(f"{k}={v}" for k, v in counts.items()))
