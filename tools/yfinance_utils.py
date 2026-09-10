@@ -38,11 +38,109 @@ Usage examples:
 
 from __future__ import annotations
 
+import os
 import sys
 from typing import Union
 
 import pandas as pd
 import yfinance as yf
+
+
+# ---------------------------------------------------------------------------
+# Tiingo historical fallback
+# ---------------------------------------------------------------------------
+# yfinance depends on Yahoo endpoints (query*.finance.yahoo.com, fc.yahoo.com)
+# that are periodically unreachable from this environment (egress resets on
+# fc.yahoo.com kill the crumb handshake and every download returns empty).
+# Tiingo provides adjusted daily OHLCV for US equities/ETFs and is the
+# documented delisted-ticker fallback (needs TIINGO_API_KEY). When yfinance
+# comes back empty we retry those tickers against Tiingo so the whole toolchain
+# (measure_event_impact, backtests, regressions) keeps working.
+
+def _tiingo_supported(ticker: str) -> bool:
+    """Tiingo's daily endpoint covers US equities/ETFs only — not futures
+    (CL=F), FX (EURUSD=X), indices (^VIX) or crypto (BTC-USD)."""
+    if not ticker:
+        return False
+    return not any(ch in ticker for ch in ("=", "^")) and "-" not in ticker
+
+
+def _tiingo_history(tickers: list[str], start: str, end: str) -> pd.DataFrame:
+    """Fetch adjusted daily OHLCV from Tiingo, shaped like yf.download output.
+
+    Returns a DataFrame with a MultiIndex column structure
+    (metric, ticker) — e.g. ('Close', 'AAPL') — matching yfinance so the
+    existing flatten/extract logic works unchanged. Tickers that Tiingo does
+    not cover (or that error) are skipped; an all-empty result returns an
+    empty DataFrame so callers fall through to their normal error path.
+    """
+    key = os.environ.get("TIINGO_API_KEY", "")
+    if not key:
+        return pd.DataFrame()
+
+    import requests
+
+    headers = {"Content-Type": "application/json",
+               "Authorization": f"Token {key}"}
+    frames: dict[str, pd.DataFrame] = {}
+    for tk in tickers:
+        if not _tiingo_supported(tk):
+            continue
+        try:
+            url = f"https://api.tiingo.com/tiingo/daily/{tk}/prices"
+            r = requests.get(
+                url,
+                params={"startDate": start, "endDate": end, "format": "json"},
+                headers=headers,
+                timeout=30,
+            )
+            if r.status_code != 200:
+                continue
+            data = r.json()
+            if not data:
+                continue
+            df = pd.DataFrame(data)
+            df["date"] = pd.to_datetime(df["date"]).dt.tz_localize(None)
+            df = df.set_index("date").sort_index()
+            # Use adjusted series to mirror yfinance auto_adjust=True.
+            out = pd.DataFrame({
+                "Open": df["adjOpen"],
+                "High": df["adjHigh"],
+                "Low": df["adjLow"],
+                "Close": df["adjClose"],
+                "Volume": df["adjVolume"],
+            })
+            frames[tk] = out
+        except Exception:
+            continue
+
+    if not frames:
+        return pd.DataFrame()
+
+    combined = pd.concat(frames, axis=1)  # columns: (ticker, metric)
+    # Reorder to (metric, ticker) to match yfinance's MultiIndex layout.
+    combined.columns = pd.MultiIndex.from_tuples(
+        [(metric, tk) for tk, metric in combined.columns]
+    )
+    combined = combined.sort_index()
+    return combined
+
+
+def _yf_download_with_fallback(
+    ticker_list: list[str], start: str, end: str, **kwargs
+) -> pd.DataFrame:
+    """yf.download() that falls back to Tiingo when Yahoo returns nothing."""
+    try:
+        raw = yf.download(ticker_list, start=start, end=end, **kwargs)
+    except Exception:
+        raw = pd.DataFrame()
+
+    if raw is None or raw.empty:
+        tiingo = _tiingo_history(ticker_list, start, end)
+        if not tiingo.empty:
+            return tiingo
+        return raw if raw is not None else pd.DataFrame()
+    return raw
 
 
 # ---------------------------------------------------------------------------
@@ -147,7 +245,8 @@ def safe_download(
     kwargs.setdefault("auto_adjust", True)
 
     single = isinstance(tickers, str)
-    raw = yf.download(tickers, start=start, end=end, **kwargs)
+    ticker_list = [tickers] if single else list(tickers)
+    raw = _yf_download_with_fallback(ticker_list, start, end, **kwargs)
 
     if raw.empty:
         ticker_str = tickers if single else ", ".join(tickers)
@@ -202,7 +301,7 @@ def get_close_prices(
     single = isinstance(tickers, str)
     ticker_list = [tickers] if single else list(tickers)
 
-    raw = yf.download(ticker_list, start=start, end=end, **kwargs)
+    raw = _yf_download_with_fallback(ticker_list, start, end, **kwargs)
 
     if raw.empty:
         raise ValueError(
