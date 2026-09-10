@@ -84,6 +84,28 @@ def test_fallback_when_yfinance_empty(monkeypatch):
     print("  test_fallback_when_yfinance_empty OK")
 
 
+class _RateLimitedResp:
+    status_code = 429
+
+    def json(self):
+        return {"detail": "over your hourly request allocation"}
+
+
+def test_rate_limit_returns_empty_not_crash(monkeypatch):
+    # Persistent 429 -> _tiingo_history returns empty (caller raises its normal
+    # ValueError) rather than crashing or looping forever. Backoff sleeps are
+    # neutralized so the test is fast.
+    monkeypatch.setenv("TIINGO_API_KEY", "dummy")
+    import time as _time
+    import requests
+    monkeypatch.setattr(_time, "sleep", lambda *_a, **_k: None)
+    monkeypatch.setattr(requests, "get", lambda *a, **k: _RateLimitedResp())
+
+    df = yu._tiingo_history(["AAPL"], "2026-08-01", "2026-08-15")
+    assert df.empty
+    print("  test_rate_limit_returns_empty_not_crash OK")
+
+
 def test_non_equity_still_raises(monkeypatch):
     # No Tiingo coverage for ^VIX -> must fall through to the normal error path.
     monkeypatch.setenv("TIINGO_API_KEY", "dummy")
@@ -127,6 +149,7 @@ if __name__ == "__main__":
     test_tiingo_supported()
     for fn in (test_tiingo_history_shape,
                test_fallback_when_yfinance_empty,
+               test_rate_limit_returns_empty_not_crash,
                test_non_equity_still_raises):
         mp = _MonkeyPatch()
         try:
