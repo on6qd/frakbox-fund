@@ -78,22 +78,33 @@ def _tiingo_history(tickers: list[str], start: str, end: str) -> pd.DataFrame:
     if not key:
         return pd.DataFrame()
 
+    import time
+
     import requests
 
     headers = {"Content-Type": "application/json",
                "Authorization": f"Token {key}"}
     frames: dict[str, pd.DataFrame] = {}
+    rate_limited = False
     for tk in tickers:
         if not _tiingo_supported(tk):
             continue
         try:
             url = f"https://api.tiingo.com/tiingo/daily/{tk}/prices"
-            r = requests.get(
-                url,
-                params={"startDate": start, "endDate": end, "format": "json"},
-                headers=headers,
-                timeout=30,
-            )
+            params = {"startDate": start, "endDate": end, "format": "json"}
+            # Tiingo's free tier caps requests per hour/day. A large event-study
+            # backtest (ticker + benchmark per event) can burst past it, so give
+            # a short backoff before treating a 429 as fatal. Sustained bulk work
+            # should wait for Yahoo to recover — Tiingo is a break-glass fallback.
+            r = requests.get(url, params=params, headers=headers, timeout=30)
+            for delay in (2, 4):
+                if r.status_code != 429:
+                    break
+                time.sleep(delay)
+                r = requests.get(url, params=params, headers=headers, timeout=30)
+            if r.status_code == 429:
+                rate_limited = True
+                continue
             if r.status_code != 200:
                 continue
             data = r.json()
@@ -115,6 +126,13 @@ def _tiingo_history(tickers: list[str], start: str, end: str) -> pd.DataFrame:
             continue
 
     if not frames:
+        if rate_limited:
+            print(
+                "WARNING: Tiingo rate-limited (HTTP 429) — hourly request "
+                "allocation exhausted. This is the yfinance fallback; wait for "
+                "Yahoo to recover before running bulk backtests.",
+                file=sys.stderr,
+            )
         return pd.DataFrame()
 
     combined = pd.concat(frames, axis=1)  # columns: (ticker, metric)
