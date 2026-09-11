@@ -228,7 +228,7 @@ def get_price_history(symbol, days=90):
 
 def get_price_around_date(symbol, event_date, days_before=5, days_after=20,
                           benchmark="SPY", event_timing="unknown",
-                          entry_price="close"):
+                          entry_price="close", benchmark_df=None):
     """
     Fetch prices around a specific event date and compute abnormal returns.
 
@@ -260,8 +260,17 @@ def get_price_around_date(symbol, event_date, days_before=5, days_after=20,
     # See tools/asset_class.resolve_event_benchmark.
     if benchmark is None:
         bench_df = pd.DataFrame()
+    elif symbol == benchmark:
+        bench_df = stock_df
+    elif benchmark_df is not None and not benchmark_df.empty:
+        # Reuse a pre-fetched benchmark series (spanning all events) instead of
+        # re-fetching SPY once per event. Lookups below are by exact date key, so
+        # a wider-than-needed cached range is harmless. This halves the price-fetch
+        # request count for multi-event studies — decisive on the Tiingo break-glass
+        # fallback, which has a low free-tier hourly request cap.
+        bench_df = benchmark_df
     else:
-        bench_df = _fetch_stock_data(benchmark, start_str, end_str) if symbol != benchmark else stock_df
+        bench_df = _fetch_stock_data(benchmark, start_str, end_str)
 
     # Build date-indexed lookups (close and open)
     stock_by_date = {d.strftime("%Y-%m-%d"): round(row["Close"], 2) for d, row in stock_df.iterrows()}
@@ -441,6 +450,35 @@ def measure_event_impact(symbol=None, event_dates=None, benchmark="SPY", sector_
             except (ImportError, Exception) as e:
                 print(f"[regime_filter] rate filter unavailable: {e}", file=sys.stderr)
 
+    # Pre-fetch the benchmark ONCE over the full span of all events so the
+    # per-event loop reuses it instead of re-fetching SPY for every event. This
+    # halves the price-fetch request count for multi-event studies — the decisive
+    # optimization when Yahoo is down and we fall back to Tiingo's rate-limited
+    # free tier (an 84-event study drops from ~168 fetches to ~85). See knowledge:
+    # tiingo break-glass rate limit.
+    benchmark_cache_df = None
+    if benchmark is not None:
+        bench_dates = []
+        for de in event_dates:
+            if isinstance(de, dict):
+                d = de.get("date")
+            elif isinstance(de, (list, tuple)) and len(de) == 2:
+                d = de[1]
+            else:
+                d = de
+            if d:
+                bench_dates.append(d)
+        if len(bench_dates) >= 2:
+            try:
+                b_start = (datetime.strptime(min(bench_dates), "%Y-%m-%d") - timedelta(days=20)).strftime("%Y-%m-%d")
+                b_end = (datetime.strptime(max(bench_dates), "%Y-%m-%d") + timedelta(days=45)).strftime("%Y-%m-%d")
+                cached = _fetch_stock_data(benchmark, b_start, b_end)
+                if not cached.empty:
+                    benchmark_cache_df = cached
+            except Exception as e:
+                print(f"[measure_event_impact] benchmark pre-fetch failed, "
+                      f"falling back to per-event fetch: {e}", file=sys.stderr)
+
     for date_entry in event_dates:
         # Resolve symbol and date from the entry
         if isinstance(date_entry, dict):
@@ -504,7 +542,8 @@ def measure_event_impact(symbol=None, event_dates=None, benchmark="SPY", sector_
 
         try:
             impact = get_price_around_date(event_symbol, date, benchmark=benchmark,
-                                           event_timing=timing, entry_price=evt_entry)
+                                           event_timing=timing, entry_price=evt_entry,
+                                           benchmark_df=benchmark_cache_df)
             if "error" not in impact:
                 # Transaction cost estimation
                 if estimate_costs:
@@ -518,7 +557,8 @@ def measure_event_impact(symbol=None, event_dates=None, benchmark="SPY", sector_
                 if sector_etf and sector_etf != event_symbol:
                     sector_impact = get_price_around_date(sector_etf, date,
                                                          benchmark=benchmark,
-                                                         event_timing=timing)
+                                                         event_timing=timing,
+                                                         benchmark_df=benchmark_cache_df)
                     if "error" not in sector_impact:
                         # Check for circular reference: is this stock a major constituent?
                         weight = SECTOR_ETF_MAJOR_CONSTITUENTS.get(sector_etf, {}).get(event_symbol, 0)
