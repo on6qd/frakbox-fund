@@ -46,6 +46,60 @@ import yfinance as yf
 
 
 # ---------------------------------------------------------------------------
+# Tiingo fallback (equities/ETFs only) — used when Yahoo egress is severed
+# ---------------------------------------------------------------------------
+
+def _tiingo_download(
+    tickers: list[str],
+    start: str,
+    end: str,
+) -> pd.DataFrame:
+    """
+    Fetch OHLCV for one or more tickers from the cached Tiingo backend and
+    return a DataFrame shaped exactly like a flattened yf.download() result.
+
+    Single ticker  -> flat columns: Open, High, Low, Close, Volume
+    Multi ticker   -> columns: Open_AAPL, Close_AAPL, Open_MSFT, ...
+                      (tickers that Tiingo cannot serve are silently dropped)
+
+    Tiingo only serves equities/ETFs — indices (^VIX), futures (CL=F), FX,
+    FRED and crypto are unsupported and yield an empty frame here.
+
+    Returns an empty DataFrame when nothing could be fetched.
+    """
+    try:
+        from tools.tiingo_cache import get_tiingo_cached
+    except Exception:  # pragma: no cover - import path guard
+        from tiingo_cache import get_tiingo_cached
+
+    single = len(tickers) == 1
+
+    if single:
+        df = get_tiingo_cached(tickers[0], start, end)
+        if df is None or df.empty:
+            return pd.DataFrame()
+        return df[["Open", "High", "Low", "Close", "Volume"]].copy()
+
+    frames = {}
+    for t in tickers:
+        df = get_tiingo_cached(t, start, end)
+        if df is not None and not df.empty:
+            frames[t] = df[["Open", "High", "Low", "Close", "Volume"]]
+
+    if not frames:
+        return pd.DataFrame()
+
+    # Assemble "metric_TICKER" flat columns to match flatten_yfinance_columns
+    out = pd.concat(
+        {t: frames[t] for t in frames},
+        axis=1,
+    )
+    # concat produces MultiIndex (ticker, metric); reorder to (metric, ticker)
+    out.columns = [f"{metric}_{sym}" for sym, metric in out.columns]
+    return out.sort_index()
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -147,13 +201,23 @@ def safe_download(
     kwargs.setdefault("auto_adjust", True)
 
     single = isinstance(tickers, str)
-    raw = yf.download(tickers, start=start, end=end, **kwargs)
+    ticker_list = [tickers] if single else list(tickers)
 
-    if raw.empty:
+    try:
+        raw = yf.download(tickers, start=start, end=end, **kwargs)
+    except Exception:
+        raw = pd.DataFrame()
+
+    if raw is None or raw.empty:
+        # Yahoo failed (egress reset / delisted) — fall back to Tiingo (equities/ETFs)
+        fallback = _tiingo_download(ticker_list, start, end)
+        if fallback is not None and not fallback.empty:
+            return fallback
         ticker_str = tickers if single else ", ".join(tickers)
         raise ValueError(
             f"yfinance returned no data for {ticker_str!r} "
-            f"from {start} to {end}. Ticker may be delisted or invalid."
+            f"from {start} to {end}. Ticker may be delisted or invalid, "
+            f"or Yahoo is unreachable and Tiingo has no coverage."
         )
 
     ticker_hint = tickers if single else None
@@ -202,12 +266,27 @@ def get_close_prices(
     single = isinstance(tickers, str)
     ticker_list = [tickers] if single else list(tickers)
 
-    raw = yf.download(ticker_list, start=start, end=end, **kwargs)
+    try:
+        raw = yf.download(ticker_list, start=start, end=end, **kwargs)
+    except Exception:
+        raw = pd.DataFrame()
 
-    if raw.empty:
+    if raw is None or raw.empty:
+        # Yahoo failed — fall back to Tiingo (equities/ETFs) and return closes directly
+        fb = _tiingo_download(ticker_list, start, end)
+        if fb is not None and not fb.empty:
+            if single:
+                close_df = fb[["Close"]].copy()
+                close_df.columns = ticker_list
+            else:
+                # fb has "metric_TICKER" columns; keep only the Close_* set
+                close_cols = [c for c in fb.columns if c.startswith("Close_")]
+                close_df = fb[close_cols].copy()
+                close_df.columns = [c[len("Close_"):] for c in close_cols]
+            return close_df.dropna(how="all")
         raise ValueError(
             f"yfinance returned no data for {ticker_list} "
-            f"from {start} to {end}."
+            f"from {start} to {end} (Tiingo fallback also empty)."
         )
 
     if isinstance(raw.columns, pd.MultiIndex):
